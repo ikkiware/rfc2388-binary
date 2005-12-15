@@ -20,7 +20,16 @@
       (is (string= "one" one))
       (is (string= "two" two))
       (is (string= "three" three))
-      (is (string= "four" four)))))
+      (is (string= "four" four)))
+
+    (test-key-values ((k1 . v1) (k2 . v2) (k3 . v3) (k4 . v4))
+                     "1=\"2\";1=2 ;1=2 ; 1=2"
+      (is-true (every (lambda (key)
+                        (string= "1" key))
+                      (list k1 k2 k3 k4)))
+      (is-true (every (lambda (value)
+                        (string= "2" value))
+                      (list v1 v2 v3 v4))))))
 
 (test as-ascii-char
   (is (char= #\Space (rfc2388::as-ascii-char 32)))
