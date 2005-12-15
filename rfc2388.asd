@@ -11,9 +11,8 @@
 (defsystem :rfc2388
   :components ((:static-file "rfc2388.asd")
                (:module :source
-                :components ((:file "constants" :depends-on ("packages"))
-                             (:file "packages")
-                             (:file "rfc2388" :depends-on ("constants" "packages"))))))
+                :components ((:file "packages")
+                             (:file "rfc2388" :depends-on ("packages"))))))
 
 (defsystem :rfc2388.test
   :components ((:module :test

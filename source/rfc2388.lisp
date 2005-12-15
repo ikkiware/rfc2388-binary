@@ -142,7 +142,7 @@ sequence."
                (setf byte (read-byte stream))
                #+rfc2388.debug (format t "Reading byte ~D (~C). State is ~D.~%" byte (code-char byte) state)
                (case byte
-                 (#.+CR+
+                 (13 ;; Carriage-Return
                   (case state
                     (0 (setf state 1)
                        (enqueue-byte))
@@ -152,7 +152,7 @@ sequence."
                     (t (setf state 0)
                        (flush-queued-bytes)
                        (handle-byte))))
-                 (#.+LF+
+                 (10 ;; Line-Feed
                   (case state
                     (1 (setf state 2)
                        (enqueue-byte))
@@ -162,7 +162,7 @@ sequence."
                     (t (setf state 0)
                        (flush-queued-bytes)
                        (handle-byte))))
-                 (#.+dash+
+                 (45 ;; Dash
                   (case state
                     (2 (setf state 3)
                        (enqueue-byte))
@@ -229,25 +229,25 @@ The returned strings may actually be displaced arrays."
     (loop
        (setf byte (read-byte stream))
        (case byte
-         (#.+CR+
+         (13 ;; Carriage-Return
           (ecase state
             (0 ;; found a CR. no header
              (setf state 4))
             (2 ;; end of header-value
              (setf state 3))))
-         (#.+LF+
+         (10 ;; Line-Feed
           (ecase state
             (4 ;; all done. no header
              (return-from read-next-header (values nil nil nil)))
             (3 ;; all done. found header
              (return-from read-next-header (values t header-name header-value)))))
-         (#.+colon+
+         (58 ;; #\:
           (ecase state
             (0 ;; done reading header-name
              (setf state 1))
             (2 ;; colon in header-value
              (extend header-value))))
-         ((#.+Space+ #.+Tab+)
+         ((32 9) ;; #\Space or #\Tab
           (ecase state
             (1 ;; whitespace after colon.
              nil)
