@@ -20,6 +20,35 @@
                              (:file "test" :depends-on ("packages")))))
   :depends-on (:rfc2388 :fiveam))
 
+
+;;;; * Parsing rfc2888 formatted data
+
+;;;; This library provides code for parsing multipart/form-data data
+;;;; streams.
+
+;;;; The main entry-point is the function PARSE-MIME. Due the various
+;;;; application specific ways in which the content should be treated
+;;;; our parser uses application supplied calbacks to deal with the
+;;;; actual data.
+
+;;;; The function READ-MIME is provided as a convenient wrapper around
+;;;; PARSE-MIME which assumse that all data can fit in memory and that
+;;;; it can be converted using nothing more that #'code-char.
+
+;;;;@include "source/packages.lisp"
+
+;;;;@include "source/rfc2388.lisp"
+
+;;;; * Known Issues
+
+;;;; ** Non US-ASCII field names
+
+;;;; Currently we assume that the names of all form fields are
+;;;; US-ASCII characters. Should a developer create a form whose name
+;;;; is "&pi;" (greek small letter pi) it is
+;;;; browser+server+implementation specific how this will be
+;;;; translated by this code.
+
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Copyright (c) 2005 Edward Marco Baringer
 ;; 

@@ -2,20 +2,6 @@
 
 (in-package :rfc2388)
 
-;;;; * Parsing rfc2888 formatted data
-
-;;;; This library provides code for parsing multipart/form-data data
-;;;; streams.
-
-;;;; The main entry-point is the function PARSE-MIME. Due the various
-;;;; application specific ways in which the content should be treated
-;;;; our parser uses application supplied calbacks to deal with the
-;;;; actual data.
-
-;;;; The function READ-MIME is provided as a convenient wrapper around
-;;;; PARSE-MIME which assumse that all data can fit in memory and that
-;;;; it can be converted using nothing more that #'code-char.
-
 ;;;; ** Public Interface
 
 (defgeneric parse-mime (source boundry callback)
@@ -324,8 +310,6 @@ KEY-VALUE-STRING is of the form: (\w+=\w+;)*"
 
 ;;;; *** Utility functions
 
-;;;; @include "constants.lisp"
-
 (defun lwsp-char-p (byte)
   "Returns true if BYTE is a linear-whitespace-char (LWSP-char).
 Either space or tab, in short."
@@ -352,16 +336,6 @@ Either space or tab, in short."
                   (char-code char)
                   (error "Bad char for a MIME boundry: ~C" char)))
             string))
-
-;;;; ** Known Issues
-
-;;;; *** Non US-ASCII field names
-
-;;;; Currently we assume that the names of all form fields are
-;;;; US-ASCII characters. Should a developer create a form whose name
-;;;; is "&pi;" (greek small letter pi) it is
-;;;; browser+server+implementation specific how this will be
-;;;; translated by this code.
 
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Modifications for TBNL Copyright (c) 2004 Michael Weber and Dr. Edmund Weitz
