@@ -72,7 +72,12 @@ PARSE-MIME. See PARSE-MIME's documentation for details."
                         (if found-header
                             (cond
                               ((string-equal "Content-Type" name)
-                               (setf (content-type part) value))
+                               (multiple-value-bind (content-type attributes)
+                                   (parse-header-value value)
+                                 (setf (content-type part) content-type)
+                                 (let ((charset (cdr (assoc "charset" attributes :test #'string-equal))))
+                                   (when charset
+                                     (setf (content-charset part) charset)))))
                               ((string-equal "Content-Length" name)
                                (setf (content-length part) value))
                               (t
