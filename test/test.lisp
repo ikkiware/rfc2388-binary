@@ -125,7 +125,8 @@
                     (map-into (make-array 9 :element-type '(unsigned-byte 8))
                               #'char-code
                               (list #\f #\i #\l #\e #\1 #\. #\t #\x #\t))))
-        (is (string= "text/plain" (content-type file1))))
+        (is (string= "text/plain" (content-type file1)))
+        (is (null (content-charset file1))))
       (is (= 2 (length parts))))))
 
 ;; Copyright (c) 2003 Janis Dzerins
