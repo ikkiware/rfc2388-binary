@@ -31,6 +31,30 @@
                         (string= "2" value))
                       (list v1 v2 v3 v4))))))
 
+(test parse-header-value
+  (multiple-value-bind (form-data attributes)
+      (rfc2388::parse-header-value "form-data")
+    (is (string= "form-data" form-data))
+    (is (null attributes)))
+  (multiple-value-bind (form-data attributes)
+      (rfc2388::parse-header-value "form-data;")
+    (is (string= "form-data" form-data))
+    (is (null attributes)))
+  (multiple-value-bind (form-data attributes)
+      (rfc2388::parse-header-value "form-data; a=b")
+    (is (string= "form-data" form-data))
+    (is (string= "a" (caar attributes)))
+    (is (string= "b" (cdar attributes))))
+  (multiple-value-bind (form-data attributes)
+      (rfc2388::parse-header-value "form-data; a=b ; c=\"d\"")
+    (is (string= "form-data" form-data))
+    (destructuring-bind ((a . b) (c . d))
+        attributes
+      (is (string= "a" a))
+      (is (string= "b" b))
+      (is (string= "c" c))
+      (is (string= "d" d)))))
+
 (test as-ascii-char
   (is (char= #\Space (rfc2388::as-ascii-char 32)))
   (is (char= #\Tab (rfc2388::as-ascii-char 9)))

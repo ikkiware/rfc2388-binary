@@ -320,7 +320,42 @@ KEY-VALUE-STRING is of the form: (\w+=\w+;)*"
       (nreverse keys-and-values))))
 
 (defun parse-header-value (header-value-string)
-  )
+  "Returns the value in header-value-string and any associated
+  attributes."
+  (declare (optimize (speed 3) (safety 0) (debug 0))
+           (type (array character (*)) header-value-string))
+  (loop
+     with value of-type (array character (*)) = (make-array (length header-value-string)
+                                                            :element-type 'character
+                                                            :adjustable t
+                                                            :fill-pointer 0)
+     with state = :pre-value
+     for offset fixnum upfrom 0
+     for char across header-value-string
+     do (flet ((extend ()
+                 (vector-push-extend char value)))
+          (case char
+            ((#\Space #\Tab)
+             (ecase state
+               (:pre-value nil)
+               (:post-value nil)))
+            (#\;
+             ;; done with value.
+             (return-from parse-header-value
+               (values value (parse-key-values (make-array (- (length header-value-string) 1 offset)
+                                                           :element-type 'character
+                                                           :displaced-to header-value-string
+                                                           :displaced-index-offset (1+ offset))))))
+            (t
+             (ecase state
+               (:pre-value
+                (setf state :in-value)
+                (extend))
+               (:in-value
+                (extend))))))
+     ;; if we get here then there's a value but no #\; and no attributes.
+     finally (return-from parse-header-value
+               (values value '()))))
 
 ;;;; *** Utility functions
 
