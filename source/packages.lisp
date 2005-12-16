@@ -18,7 +18,9 @@
    #:header-name
    #:header-value
    #:header-attributes
-   #:get-header-attribute))
+   #:get-header-attribute
+
+   #:parse-header-value))
 
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Copyright (c) 2005 Edward Marco Baringer
