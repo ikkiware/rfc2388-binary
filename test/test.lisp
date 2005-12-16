@@ -112,9 +112,34 @@
       (is (string= "bar" header-value)))
     (is-false (rfc2388::read-next-header header))))
 
-(test parse-mime
+(test read-mime
   (with-input-from-file (mime "data/mime5" :element-type '(unsigned-byte 8))
-    (let ((parts (read-mime mime "AaB03x")))
+    (read-mime mime
+               "AaB03x"
+               (lambda (partial-mime-part)
+                 (setf (content partial-mime-part)
+                       (make-array 10
+                                   :element-type '(unsigned-byte 8)
+                                   :adjustable t
+                                   :fill-pointer 0))
+                 (values
+                  (lambda (byte)
+                    (vector-push-extend byte (content partial-mime-part)))
+                  (lambda (mime-part)
+                    mime-part))))
+    (pass))
+  (with-input-from-file (mime "data/mime5" :element-type '(unsigned-byte 8))
+    (let ((parts (read-mime mime
+                            "AaB03x"
+                            (lambda (partial-mime-part)
+                              (setf (content partial-mime-part)
+                                    (make-array 10
+                                                :element-type '(unsigned-byte 8)
+                                                :adjustable t
+                                                :fill-pointer 0))
+                              (values
+                               (lambda (byte) (vector-push-extend byte (content partial-mime-part)))
+                               (lambda (mime-part) mime-part))))))
       (let ((larry (first parts)))
         (is (equalp (content larry)
                     (map-into (make-array 5 :element-type '(unsigned-byte 8))
@@ -125,8 +150,7 @@
                     (map-into (make-array 9 :element-type '(unsigned-byte 8))
                               #'char-code
                               (list #\f #\i #\l #\e #\1 #\. #\t #\x #\t))))
-        (is (string= "text/plain" (content-type file1)))
-        (is (null (content-charset file1))))
+        (is (string= "text/plain" (content-type (second parts)))))
       (is (= 2 (length parts))))))
 
 ;; Copyright (c) 2003 Janis Dzerins

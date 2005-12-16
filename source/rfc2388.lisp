@@ -11,39 +11,36 @@
 
 ;;;; ** Public Interface
 
-(defgeneric parse-mime (source boundry callback)
+(defgeneric read-mime (source boundry callback)
   (:documentation
    "Parses the MIME entites in SOURCE.
 
 SOURCE is either a vector of (unsigned-byte 8) or a stream whose
-element-type is (unsigned-byte 8). CALLBACK is a function which
-will be passed one argument, a MIME-PART containing the headers
-of the mime part and must return a one argument function. The
-returned function will be called once for every byte of data in
-the mime part."))
+element-type is (unsigned-byte 8). BOUNDRY is either a string of
+US-ASCII encodeable characters or a byte vector. CALLBACK is a
+function which will be passed one argument, a MIME-PART
+containing the headers of the mime part and must return two
+values:
 
-(defun read-mime (source boundry)
-  "Parses the MIME data in SOURCE, returns it as
-  a list of MIME-PART objects containing the headers and the
-  data.
+- a byte-handler function. This is a one argument function which
+  will be passed every byte in the mime part's content.
 
-This is the convenience interface to PARSE-MIME, all data is read
-into memory, we assume that every byte in the data corresponds to
-exactly one character and that code-char is sufficent to convert
-bytes to characters.
+- a termination function. This is a one argument function which
+  will be passed the mime-part and must return whatever is to be
+  returned from read-mime.
 
-The SOURCE and BOUNDRY arguments are passed unchanged to
-PARSE-MIME. See PARSE-MIME's documentation for details."
-  (parse-mime source boundry
-              (lambda (partial-mime-part)
-                (setf (content partial-mime-part)
-                      (make-array (or (content-length partial-mime-part)
-                                      1024)
-                                  :element-type '(unsigned-byte 8)
-                                  :adjustable t
-                                  :fill-pointer 0))
-                (lambda (byte)
-                  (vector-push-extend byte (content partial-mime-part))))))
+READ-MIME consumes bytes from SOURCE and returns a list of the
+whatever the various termination functions returned.
+
+Example:
+
+ (read-mime #<a binary stream> \"123\"
+            (lambda (mime-parte)
+              (values (lambda (byte) (collect-byte-somewhere byte))
+                      (lambda (mime-part) mime-part))))
+
+  This call would return a list of mime-part objects passing each
+  byte to collect-byte-somewhere."))
 
 (defclass mime-part ()
   ((content :accessor content :initform nil)
@@ -52,23 +49,46 @@ PARSE-MIME. See PARSE-MIME's documentation for details."
    (content-charset :accessor content-charset :initform nil)
    (headers :accessor headers :initform '())))
 
+(defgeneric get-header (part header-name)
+  (:documentation "Returns the value, a string, of the header
+  named HEADER-NAME, also a string."))
+
 (defmethod get-header ((part mime-part) (header-name string))
   (cdr (assoc header-name (headers part) :test #'string-equal)))
+
+(defun parse-mime (source boundry
+                   &key write-content-to-file
+                   (byte-encoder #'code-char))
+  "Parses MIME entities, returning them as a list.  Each element
+in the list is of form: (body headers), where BODY is the
+contents of MIME part, and HEADERS are all headers for that part.
+BOUNDARY is a string used to separate MIME entities.
+
+This is the convenience interface to READ-MIME, all data is read
+into memory and we assume that every byte in the data corresponds
+to exactly one character.
+
+The SOURCE and BOUNDRY arguments are passed unchanged to
+READ-MIME. See READ-MIME's documentation for details."
+  (read-mime source boundry
+             (if write-content-to-file
+                 (make-mime-file-writer byte-encoder)
+                 (make-mime-buffer-writer byte-encoder))))
 
 ;;;; ** Implementation
 
 ;;;; *** Actual parsers
 
-(defmethod parse-mime ((source string) boundry callback)
+(defmethod read-mime ((source string) boundry callback)
   (with-input-from-string (source source)
-    (parse-mime source boundry callback)))
+    (read-mime source boundry callback)))
 
-(defmethod parse-mime ((source stream) (boundry string) callback)
-  (parse-mime source (ascii-string-to-boundry-array boundry) callback))
+(defmethod read-mime ((source stream) (boundry string) callback)
+  (read-mime source (ascii-string-to-boundry-array boundry) callback))
 
-(defmethod parse-mime ((source stream) (boundry array) callback)
+(defmethod read-mime ((source stream) (boundry array) callback)
   ;; read up to the first part
-  (read-until-next-boundary source boundry nil :assume-first-boundry t)
+  (read-until-next-boundary source boundry #'identity :assume-first-boundry t)
   ;; read headrs and bonudies until we're done
   (loop
      for part = (loop
@@ -90,18 +110,19 @@ PARSE-MIME. See PARSE-MIME's documentation for details."
                               (t
                                (push (cons name value) (headers part))))
                             (return-from read-headers part))))
-     for more = (read-until-next-boundary source boundry (funcall callback part))
-     collect part
+     for (byte-handler termination-callback)
+       = (multiple-value-list (funcall callback part))
+     for more = (read-until-next-boundary source boundry byte-handler)
+     collect (funcall termination-callback part)
      while more))
 
-(defun read-until-next-boundary (stream boundary data-handler
-                                 &key assume-first-boundry)
+(defun read-until-next-boundary (stream boundary data-handler &key assume-first-boundry)
   "Reads from STREAM up to the next boundary. For every byte of
 data in stream we call DATA-HANDLER passing it the byte. Returns
 T if there's more data to be read, NIL otherwise.
 
 The ASSUME-FIRST-BOUNDRY parameter should T if we're reading the
-first part of a MIME mesage since there is no leading CR LF
+first part of a MIME message, where there is no leading CR LF
 sequence."
   ;; Read until  CR|LF|-|-|boundary|-|-|transport-padding|CR|LF
   ;; States:    0  1  2 3 4        5 6 7                 8  9  10
@@ -385,8 +406,8 @@ KEY-VALUE-STRING is of the form: (\w+=\w+;)*"
 Either space or tab, in short."
   (declare (optimize (speed 3) (safety 0) (debug 0))
            (type (unsigned-byte 8) byte))
-  (or (= +Space+ byte)
-      (= +Tab+ byte)))
+  (or (= 32 byte)
+      (= 9 byte)))
 
 (defun as-ascii-char (byte)
   "Assuming BYTE is an ASCII coded character retun the corresponding character."
@@ -406,6 +427,61 @@ Either space or tab, in short."
                   (char-code char)
                   (error "Bad char for a MIME boundry: ~C" char)))
             string))
+
+;;;; *** Support functions for PARSE-MIME
+
+(defun mime-part-headers-to-alist-helper (mime-part content)
+  (list content
+        (append
+         (when (content-length mime-part)
+           (list (cons "Content-Length" (content-length mime-part))))
+         (when (content-type mime-part)
+           (list (cons "Content-Type"
+                       (if (content-charset mime-part)
+                           (format nil "~A; charset=\"~A\""
+                                   (content-type mime-part)
+                                   (content-charset mime-part))
+                           (content-type mime-part)))))
+         (headers mime-part))))
+
+(defun make-mime-file-writer (byte-encoder)
+  (lambda (partial-mime-part)
+    (let ((temp-filename (make-tmp-file-name)))
+      (setf (content partial-mime-part)
+            (open temp-filename
+                  :direction :output
+                  :element-type 'character))
+      (values
+       (lambda (byte)
+         (write-byte (funcall byte-encoder byte)
+                     (content partial-mime-part)))
+       (lambda (mime-part)
+         (mime-part-headers-to-alist-helper
+          mime-part
+          (open temp-filename
+                :direction :input
+                :element-type '(unsigned-byte 8))))))))
+
+(defun make-mime-buffer-writer (byte-encoder)
+  (lambda (partial-mime-part)
+    (setf (content partial-mime-part)
+          (make-array (or (content-length partial-mime-part)
+                          100)
+                      :element-type 'character
+                      :adjustable t
+                      :fill-pointer 0))
+    (values
+     (lambda (byte)
+       (vector-push-extend (funcall byte-encoder byte)
+                           (content partial-mime-part)))
+     (lambda (mime-part)
+       (mime-part-headers-to-alist-helper
+        mime-part (content partial-mime-part))))))
+
+(defun make-tmp-file-name ()
+  (if (find-package :tbnl)
+      (funcall (find-symbol "MAKE-TMP-FILE-NAME" :tbnl))
+      (error "WRITE-CONTENT-TO-FILE keyword argument to PARSE-MIME is supported in TBNL only at the moment.")))
 
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Modifications for TBNL Copyright (c) 2004 Michael Weber and Dr. Edmund Weitz
