@@ -2,6 +2,13 @@
 
 (in-package :rfc2388)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter *debug* nil
+    "When T we compile the code with some logging statements built in.")
+  (defmacro debug-message (message &rest message-control)
+    (when *debug*
+      `(format *debug-io* ,message ,@message-control))))
+
 ;;;; ** Public Interface
 
 (defgeneric parse-mime (source boundry callback)
@@ -119,7 +126,8 @@ sequence."
              (type (unsigned-byte 8) byte)
              (type boolean more-data))
     (labels ((handle-byte ()
-               #+rfc2388.debug (format t "Handling byte ~D. State is ~D.~%" byte state)
+               (debug-message "READ-UNTIL-NEXT-BOUNDARY: Handling byte ~D (~C)~%"
+                      byte (code-char byte))
                (funcall data-handler byte))
              (flush-queued-bytes ()
                (dotimes (i queue-index)
@@ -130,8 +138,10 @@ sequence."
                (setf (aref queued-bytes queue-index) byte)
                (incf queue-index))
              (parse-next-byte ()
+               (debug-message "READ-UNTIL-NEXT-BOUNDARY: State: ~D;~% "
+                              state)               
                (setf byte (read-byte stream))
-               #+rfc2388.debug (format t "Reading byte ~D (~C). State is ~D.~%" byte (code-char byte) state)
+               (debug-message "                          Byte: ~D (~C) ==> " byte (code-char byte))
                (case byte
                  (13 ;; Carriage-Return
                   (case state
@@ -148,6 +158,7 @@ sequence."
                     (1 (setf state 2)
                        (enqueue-byte))
                     (9 ;; all done.
+                     (debug-message "Term.~%")
                      (return-from read-until-next-boundary
                        (values more-data)))
                     (t (setf state 0)
@@ -185,7 +196,8 @@ sequence."
                      (flush-queued-bytes)
                      (handle-byte))
                     (t (setf state 0)
-                       (handle-byte)))))))
+                       (handle-byte)))))
+               (debug-message "~S;~%" state)))
       (loop
          ;; this loop will exit when one of two conditions occur:
          ;; 1) we hit an EOF in the stream
@@ -217,42 +229,46 @@ The returned strings may actually be displaced arrays."
              (type (array character (*)) header-name header-value))
     (labels ((extend (array)
                (vector-push-extend (as-ascii-char byte) array)))
-    (loop
-       (setf byte (read-byte stream))
-       (case byte
-         (13 ;; Carriage-Return
-          (ecase state
-            (0 ;; found a CR. no header
-             (setf state 4))
-            (2 ;; end of header-value
-             (setf state 3))))
-         (10 ;; Line-Feed
-          (ecase state
-            (4 ;; all done. no header
-             (return-from read-next-header (values nil nil nil)))
-            (3 ;; all done. found header
-             (return-from read-next-header (values t header-name header-value)))))
-         (58 ;; #\:
-          (ecase state
-            (0 ;; done reading header-name
-             (setf state 1))
-            (2 ;; colon in header-value
-             (extend header-value))))
-         ((32 9) ;; #\Space or #\Tab
-          (ecase state
-            (1 ;; whitespace after colon.
-             nil)
-            (2 ;; whitespace in header-value
-             (extend header-value))))
-         (t
-          (ecase state
-            (0 ;; character in header-name
-             (extend header-name))
-            (1 ;; end of whitespace after colon (there may be no whitespace)
-             (extend header-value)
-             (setf state 2))
-            (2 ;; character in header-value
-             (extend header-value)))))))))
+      (loop
+         (debug-message "READ-NEXT-HEADER State: ~S;~%" state)
+         (setf byte (read-byte stream))
+         (debug-message "                 Byte: ~D (~C) ==> " byte (code-char byte))
+         (case byte
+           (13 ;; Carriage-Return
+            (ecase state
+              (0 ;; found a CR. no header
+               (setf state 4))
+              (2 ;; end of header-value
+               (setf state 3))))
+           (10 ;; Line-Feed
+            (debug-message "Term.~%")
+            (ecase state
+              (4 ;; all done. no header
+               (return-from read-next-header (values nil nil nil)))
+              (3 ;; all done. found header
+               (return-from read-next-header (values t header-name header-value)))))
+           (58 ;; #\:
+            (ecase state
+              (0 ;; done reading header-name
+               (setf state 1))
+              (2 ;; colon in header-value
+               (extend header-value))))
+           ((32 9) ;; #\Space or #\Tab
+            (ecase state
+              (1 ;; whitespace after colon.
+               nil)
+              (2 ;; whitespace in header-value
+               (extend header-value))))
+           (t
+            (ecase state
+              (0 ;; character in header-name
+               (extend header-name))
+              (1 ;; end of whitespace after colon (there may be no whitespace)
+               (extend header-value)
+               (setf state 2))
+              (2 ;; character in header-value
+               (extend header-value)))))
+         (debug-message "~S;~%" state)))))
 
 (defun parse-key-values (key-value-string)
   "Returns an alist of the keys and values in KEY-VALUE-STRING.
