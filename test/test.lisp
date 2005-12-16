@@ -112,34 +112,24 @@
       (is (string= "bar" header-value)))
     (is-false (rfc2388::read-next-header header))))
 
+(defun simple-test-callback (partial-mime-part)
+  (setf (content partial-mime-part)
+        (make-array 10
+                    :element-type '(unsigned-byte 8)
+                    :adjustable t
+                    :fill-pointer 0))
+  (values
+   (lambda (byte)
+     (vector-push-extend byte (content partial-mime-part)))
+   (lambda (mime-part)
+     mime-part)))
+
 (test read-mime
   (with-input-from-file (mime "data/mime5" :element-type '(unsigned-byte 8))
-    (read-mime mime
-               "AaB03x"
-               (lambda (partial-mime-part)
-                 (setf (content partial-mime-part)
-                       (make-array 10
-                                   :element-type '(unsigned-byte 8)
-                                   :adjustable t
-                                   :fill-pointer 0))
-                 (values
-                  (lambda (byte)
-                    (vector-push-extend byte (content partial-mime-part)))
-                  (lambda (mime-part)
-                    mime-part))))
+    (read-mime mime "AaB03x" #'simple-test-callback)
     (pass))
   (with-input-from-file (mime "data/mime5" :element-type '(unsigned-byte 8))
-    (let ((parts (read-mime mime
-                            "AaB03x"
-                            (lambda (partial-mime-part)
-                              (setf (content partial-mime-part)
-                                    (make-array 10
-                                                :element-type '(unsigned-byte 8)
-                                                :adjustable t
-                                                :fill-pointer 0))
-                              (values
-                               (lambda (byte) (vector-push-extend byte (content partial-mime-part)))
-                               (lambda (mime-part) mime-part))))))
+    (let ((parts (read-mime mime "AaB03x" #'simple-test-callback)))
       (let ((larry (first parts)))
         (is (equalp (content larry)
                     (map-into (make-array 5 :element-type '(unsigned-byte 8))
@@ -152,6 +142,29 @@
                               (list #\f #\i #\l #\e #\1 #\. #\t #\x #\t))))
         (is (string= "text/plain" (content-type (second parts)))))
       (is (= 2 (length parts))))))
+
+(test read-mime-multipart
+  (with-input-from-file (mime "data/mime6" :element-type '(unsigned-byte 8))
+    (read-mime mime "AaB03x" #'simple-test-callback)
+    (pass))
+  (with-input-from-file (mime "data/mime6" :element-type '(unsigned-byte 8))
+    (let ((parts (read-mime mime "AaB03x" #'simple-test-callback)))
+      (is (= 3 (length parts)))
+      (destructuring-bind (file1 file2 larry)
+          parts
+        (is (equalp (content larry)
+                    (map-into (make-array 5 :element-type '(unsigned-byte 8))
+                              #'char-code
+                              (list #\L #\a #\r #\r #\y))))
+        (is (string= "form-data" (header-value (get-header larry "Content-Disposition"))))
+        (is (equalp (content file1)
+                    (map-into (make-array 9 :element-type '(unsigned-byte 8))
+                              #'char-code
+                              (list #\f #\i #\l #\e #\1 #\. #\t #\x #\t))))
+        (is (equalp (content file2)
+                    (map-into (make-array 9 :element-type '(unsigned-byte 8))
+                              #'char-code
+                              (list #\f #\i #\l #\e #\2 #\. #\g #\i #\f))))))))
 
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Copyright (c) 2005 Edward Marco Baringer

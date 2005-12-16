@@ -11,10 +11,14 @@
 
    #:mime-part
    #:content
-   #:get-header
    #:content-type
    #:content-length
-   #:content-charset))
+   #:content-charset
+   #:get-header
+   #:header-name
+   #:header-value
+   #:header-attributes
+   #:get-header-attribute))
 
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Copyright (c) 2005 Edward Marco Baringer

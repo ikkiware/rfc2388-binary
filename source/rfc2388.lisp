@@ -54,7 +54,24 @@ Example:
   named HEADER-NAME, also a string."))
 
 (defmethod get-header ((part mime-part) (header-name string))
-  (cdr (assoc header-name (headers part) :test #'string-equal)))
+  (find header-name (headers part)
+        :key #'header-name
+        :test #'string=))
+
+(defclass mime-header ()
+  ((name :accessor header-name
+         :initarg :name)
+   (value :accessor header-value
+          :initarg :value)
+   (attributes :accessor header-attributes
+               :initarg :attributes)))
+
+(defgeneric get-header-attribute (header name)
+  (:documentation "Returns the value of the attribute named NAME
+  in the header HEADER."))
+
+(defmethod get-header-attribute ((header mime-header) (name string))
+  (cdr (assoc name (header-attributes header) :test #'string-equal)))
 
 (defun parse-mime (source boundary
                    &key write-content-to-file
@@ -89,32 +106,55 @@ READ-MIME. See READ-MIME's documentation for details."
 (defmethod read-mime ((source stream) (boundary array) callback)
   ;; read up to the first part
   (read-until-next-boundary source boundary #'identity :assume-first-boundary t)
-  ;; read headrs and bonudies until we're done
+  ;; read headers and boundries until we're done
   (loop
-     for part = (loop
-                   named read-headers
-                   with part = (make-instance 'mime-part)
-                   do (multiple-value-bind (found-header name value)
-                          (read-next-header source)
-                        (if found-header
-                            (cond
-                              ((string-equal "Content-Type" name)
-                               (multiple-value-bind (content-type attributes)
-                                   (parse-header-value value)
-                                 (setf (content-type part) content-type)
-                                 (let ((charset (cdr (assoc "charset" attributes :test #'string-equal))))
-                                   (when charset
-                                     (setf (content-charset part) charset)))))
-                              ((string-equal "Content-Length" name)
-                               (setf (content-length part) value))
-                              (t
-                               (push (cons name value) (headers part))))
-                            (return-from read-headers part))))
-     for (byte-handler termination-callback)
-       = (multiple-value-list (funcall callback part))
-     for more = (read-until-next-boundary source boundary byte-handler)
-     collect (funcall termination-callback part)
-     while more))
+     with parts = '() ;; hold all the parts in this list
+     for part = (make-instance 'mime-part) ;; each iteration around
+                                           ;; this loop creates a
+                                           ;; part, unless we get a
+                                           ;; multipart/mixed
+     do (loop
+           ;; read in the headers
+           named read-headers
+           do (multiple-value-bind (found-header name value)
+                  (read-next-header source)
+                (if found-header
+                    (multiple-value-bind (value attributes)
+                        (parse-header-value value)
+                      (let ((header (make-instance 'mime-header
+                                                   :name name
+                                                   :value value
+                                                   :attributes attributes)))
+                        (push header (headers part))
+                        (cond
+                          ((string-equal "Content-Type" name)
+                           (setf (content-type part) value)
+                           (when (get-header-attribute header "charset")
+                             (setf (content-charset part) (get-header-attribute header "charset"))))
+                          ((string-equal "Content-Length" name)
+                           (setf (content-length part) value)))))
+                    (progn
+                      (setf (headers part) (nreverse (headers part)))
+                      (return-from read-headers part)))))
+     do (if (string= "multipart/mixed" (content-type part))
+            (progn
+              (dolist (nested-part (read-mime source
+                                              (get-header-attribute (get-header part "Content-Type") "boundary")
+                                              callback))
+                (push nested-part parts))
+              (let ((more (read-until-next-boundary source boundary
+                                                    (lambda (byte)
+                                                      (declare (ignore byte))
+                                                      (error "Bad data in mime stream."))
+                                                    :assume-first-boundary t)))
+                (when (not more)
+                  (return-from read-mime (nreverse parts)))))
+            (multiple-value-bind (byte-handler termination-callback)
+                (funcall callback part)
+              (let ((more (read-until-next-boundary source boundary byte-handler)))
+                (push (funcall termination-callback part) parts)
+                (when (not more)
+                  (return-from read-mime (nreverse parts))))))))
 
 (defun read-until-next-boundary (stream boundary data-handler &key assume-first-boundary)
   "Reads from STREAM up to the next boundary. For every byte of
