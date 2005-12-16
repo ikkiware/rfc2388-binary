@@ -11,12 +11,12 @@
 
 ;;;; ** Public Interface
 
-(defgeneric read-mime (source boundry callback)
+(defgeneric read-mime (source boundary callback)
   (:documentation
    "Parses the MIME entites in SOURCE.
 
 SOURCE is either a vector of (unsigned-byte 8) or a stream whose
-element-type is (unsigned-byte 8). BOUNDRY is either a string of
+element-type is (unsigned-byte 8). BOUNDARY is either a string of
 US-ASCII encodeable characters or a byte vector. CALLBACK is a
 function which will be passed one argument, a MIME-PART
 containing the headers of the mime part and must return two
@@ -56,7 +56,7 @@ Example:
 (defmethod get-header ((part mime-part) (header-name string))
   (cdr (assoc header-name (headers part) :test #'string-equal)))
 
-(defun parse-mime (source boundry
+(defun parse-mime (source boundary
                    &key write-content-to-file
                    (byte-encoder #'code-char))
   "Parses MIME entities, returning them as a list.  Each element
@@ -68,9 +68,9 @@ This is the convenience interface to READ-MIME, all data is read
 into memory and we assume that every byte in the data corresponds
 to exactly one character.
 
-The SOURCE and BOUNDRY arguments are passed unchanged to
+The SOURCE and BOUNDARY arguments are passed unchanged to
 READ-MIME. See READ-MIME's documentation for details."
-  (read-mime source boundry
+  (read-mime source boundary
              (if write-content-to-file
                  (make-mime-file-writer byte-encoder)
                  (make-mime-buffer-writer byte-encoder))))
@@ -79,16 +79,16 @@ READ-MIME. See READ-MIME's documentation for details."
 
 ;;;; *** Actual parsers
 
-(defmethod read-mime ((source string) boundry callback)
+(defmethod read-mime ((source string) boundary callback)
   (with-input-from-string (source source)
-    (read-mime source boundry callback)))
+    (read-mime source boundary callback)))
 
-(defmethod read-mime ((source stream) (boundry string) callback)
-  (read-mime source (ascii-string-to-boundry-array boundry) callback))
+(defmethod read-mime ((source stream) (boundary string) callback)
+  (read-mime source (ascii-string-to-boundary-array boundary) callback))
 
-(defmethod read-mime ((source stream) (boundry array) callback)
+(defmethod read-mime ((source stream) (boundary array) callback)
   ;; read up to the first part
-  (read-until-next-boundary source boundry #'identity :assume-first-boundry t)
+  (read-until-next-boundary source boundary #'identity :assume-first-boundary t)
   ;; read headrs and bonudies until we're done
   (loop
      for part = (loop
@@ -112,16 +112,16 @@ READ-MIME. See READ-MIME's documentation for details."
                             (return-from read-headers part))))
      for (byte-handler termination-callback)
        = (multiple-value-list (funcall callback part))
-     for more = (read-until-next-boundary source boundry byte-handler)
+     for more = (read-until-next-boundary source boundary byte-handler)
      collect (funcall termination-callback part)
      while more))
 
-(defun read-until-next-boundary (stream boundary data-handler &key assume-first-boundry)
+(defun read-until-next-boundary (stream boundary data-handler &key assume-first-boundary)
   "Reads from STREAM up to the next boundary. For every byte of
 data in stream we call DATA-HANDLER passing it the byte. Returns
 T if there's more data to be read, NIL otherwise.
 
-The ASSUME-FIRST-BOUNDRY parameter should T if we're reading the
+The ASSUME-FIRST-BOUNDARY parameter should T if we're reading the
 first part of a MIME message, where there is no leading CR LF
 sequence."
   ;; Read until  CR|LF|-|-|boundary|-|-|transport-padding|CR|LF
@@ -134,7 +134,7 @@ sequence."
         (queue-index 0)
         (boundary-index 0)
         (boundary-length (length boundary))
-        (state (if assume-first-boundry
+        (state (if assume-first-boundary
                    2
                    0))
         (byte 0)
@@ -210,7 +210,7 @@ sequence."
                      (incf boundary-index)
                      (enqueue-byte)
                      (when (= boundary-index boundary-length)
-                       ;; done with the boundry
+                       ;; done with the boundary
                        (setf state 5)))
                     ((and (= 4 state))
                      (setf state 0)
@@ -222,7 +222,7 @@ sequence."
       (loop
          ;; this loop will exit when one of two conditions occur:
          ;; 1) we hit an EOF in the stream
-         ;; 2) we read the next boundry and return. (see the
+         ;; 2) we read the next boundary and return. (see the
          ;;    return-from form in the hnadler for the +LF+ char.
          (parse-next-byte)))))
 
@@ -418,14 +418,14 @@ Either space or tab, in short."
               "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~")
              (- byte 33)))))
 
-(defun ascii-string-to-boundry-array (string)
+(defun ascii-string-to-boundary-array (string)
   (map-into (make-array (length string)
                         :element-type '(unsigned-byte 8)
                         :adjustable nil)
             (lambda (char)
               (if (< (char-code char) 128)
                   (char-code char)
-                  (error "Bad char for a MIME boundry: ~C" char)))
+                  (error "Bad char for a MIME boundary: ~C" char)))
             string))
 
 ;;;; *** Support functions for PARSE-MIME
