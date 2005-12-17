@@ -26,14 +26,14 @@
 ;;;; This library provides code for parsing multipart/form-data data
 ;;;; streams.
 
-;;;; The main entry-point is the function PARSE-MIME. Due the various
+;;;; The main entry-point is the function READ-MIME. Due the various
 ;;;; application specific ways in which the content should be treated
 ;;;; our parser uses application supplied calbacks to deal with the
 ;;;; actual data.
 
-;;;; The function READ-MIME is provided as a convenient wrapper around
-;;;; PARSE-MIME which assumse that all data can fit in memory and that
-;;;; it can be converted using nothing more that #'code-char.
+;;;; The function PARSE-MIME is provided as a convenient wrapper
+;;;; around READ-MIME which assumse that all data can fit in memory
+;;;; and that it can be converted using nothing more that #'code-char.
 
 ;;;;@include "source/packages.lisp"
 
