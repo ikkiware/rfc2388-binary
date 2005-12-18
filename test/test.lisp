@@ -67,14 +67,14 @@
   (with-input-from-file (mime "data/mime1" :element-type '(unsigned-byte 8))
     (is-true
      (rfc2388::read-until-next-boundary mime
-                                        (rfc2388::ascii-string-to-boundry-array "12345678")
+                                        (rfc2388::ascii-string-to-boundary-array "12345678")
                                         (lambda (byte)
                                           (declare (ignore byte))
                                           (fail)))))
   (with-input-from-file (mime "data/mime2" :element-type '(unsigned-byte 8))
     (is-false
      (rfc2388::read-until-next-boundary mime
-                                        (rfc2388::ascii-string-to-boundry-array "12345678")
+                                        (rfc2388::ascii-string-to-boundary-array "12345678")
                                         (lambda (byte)
                                           (fail "Read char byte ~D (~C), why?" byte (code-char byte)))))))
 
@@ -83,7 +83,7 @@
     (with-input-from-file (mime "data/mime3" :element-type '(unsigned-byte 8))
       (is-true
        (rfc2388::read-until-next-boundary mime
-                                          (rfc2388::ascii-string-to-boundry-array "12345678")
+                                          (rfc2388::ascii-string-to-boundary-array "12345678")
                                           (lambda (byte)
                                             (write-char (code-char byte) hello-world))))
       (is (string= "hello, world!" (get-output-stream-string hello-world)))))
@@ -91,13 +91,13 @@
     (with-input-from-file (mime "data/mime4" :element-type '(unsigned-byte 8))
       (is-true
        (rfc2388::read-until-next-boundary mime
-                                          (rfc2388::ascii-string-to-boundry-array "12345678")
+                                          (rfc2388::ascii-string-to-boundary-array "12345678")
                                           (lambda (byte)
                                             (declare (ignore byte))
                                             (fail))))
       (is-false
        (rfc2388::read-until-next-boundary mime
-                                          (rfc2388::ascii-string-to-boundry-array "12345678")
+                                          (rfc2388::ascii-string-to-boundary-array "12345678")
                                           (lambda (byte)
                                             (write-char (code-char byte) hello-world))))
       (is (string= "hello, world!" (get-output-stream-string hello-world))))))
