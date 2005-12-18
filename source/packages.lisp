@@ -14,6 +14,7 @@
    #:content-type
    #:content-length
    #:content-charset
+   #:headers
    #:get-header
    #:header-name
    #:header-value
