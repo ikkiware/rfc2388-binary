@@ -126,10 +126,10 @@
 
 (test read-mime
   (with-input-from-file (mime "data/mime5" :element-type '(unsigned-byte 8))
-    (read-mime mime "AaB03x" #'simple-test-callback)
+    (read-mime mime "--AaB03x" #'simple-test-callback)
     (pass))
   (with-input-from-file (mime "data/mime5" :element-type '(unsigned-byte 8))
-    (let ((parts (read-mime mime "AaB03x" #'simple-test-callback)))
+    (let ((parts (read-mime mime "--AaB03x" #'simple-test-callback)))
       (let ((larry (first parts)))
         (is (equalp (content larry)
                     (map-into (make-array 5 :element-type '(unsigned-byte 8))
