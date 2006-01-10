@@ -231,6 +231,18 @@ sequence."
                        (enqueue-byte))
                     (3 (setf state 4)
                        (enqueue-byte))
+                    (4 ;; dashes can be part of the boundary :(
+                     (if (= byte (aref boundary boundary-index))
+                         (progn
+                           (incf boundary-index)
+                           (enqueue-byte)
+                           (when (= boundary-index boundary-length)
+                             ;; done with the boundary
+                             (setf state 5)))
+                         (progn
+                           (setf state 0)
+                           (flush-queued-bytes)
+                           (handle-byte))))
                     (5 (setf state 6)
                        (enqueue-byte))
                     (6 (setf state 7)
@@ -252,7 +264,7 @@ sequence."
                      (when (= boundary-index boundary-length)
                        ;; done with the boundary
                        (setf state 5)))
-                    ((and (= 4 state))
+                    ((= 4 state)
                      (setf state 0)
                      (flush-queued-bytes)
                      (handle-byte))
