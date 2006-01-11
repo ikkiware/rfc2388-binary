@@ -20,7 +20,8 @@
    #:header-value
    #:header-attributes
    #:get-header-attribute
-
+   #:print-mime-part
+   
    #:parse-header-value))
 
 ;; Copyright (c) 2003 Janis Dzerins

@@ -49,6 +49,16 @@ Example:
    (content-charset :accessor content-charset :initform nil)
    (headers :accessor headers :initform '())))
 
+(defmethod print-mime-part ((part mime-part) &optional (stream *trace-output*))
+  (dolist (header (headers part))
+    (format stream "~S: ~S~:{; ~S=~S~}~%"
+            (header-name header) (header-value header)
+            (mapcar (lambda (attribute)
+                      (list (car attribute) (cdr attribute)))
+                    (header-attributes header)))
+    (terpri stream)
+    (princ (content part) stream)))
+
 (defgeneric get-header (part header-name)
   (:documentation "Returns the value, a string, of the header
   named HEADER-NAME, also a string."))
