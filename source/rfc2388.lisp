@@ -60,8 +60,8 @@ Example:
     (princ (content part) stream)))
 
 (defgeneric get-header (part header-name)
-  (:documentation "Returns the value, a string, of the header
-  named HEADER-NAME, also a string."))
+  (:documentation "Returns the mime-header object for the header
+  named HEADER-NAME (a string)."))
 
 (defmethod get-header ((part mime-part) (header-name string))
   (find header-name (headers part)
