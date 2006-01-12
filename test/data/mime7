@@ -1,33 +1,5 @@
------------------------------960011103861968210175022808
-Content-Disposition: form-data; name="submit-name"
+--AaB03x
+Content-Disposition: form-data; name="files"
 
-marco
------------------------------960011103861968210175022808
-Content-Disposition: form-data; name="file1"; filename="Abstract.java"
-Content-Type: text/plain
-
-
-
-public abstract class MyClass {
-
-    
-
-}
-
-
-public class Altro extends MyClass {
-
-
-}
------------------------------960011103861968210175022808
-Content-Disposition: form-data; name="file2"; filename="Abstract.java~"
-Content-Type: application/octet-stream
-
-
-
-public abstract class MyClass {
-
-
-}
------------------------------960011103861968210175022808--
-EODATA
+----AaB03
+--AaB03x--

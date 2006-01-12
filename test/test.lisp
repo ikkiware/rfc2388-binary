@@ -166,6 +166,18 @@
                               #'char-code
                               (list #\f #\i #\l #\e #\2 #\. #\g #\i #\f))))))))
 
+(test read-mime-multipart2
+  (with-input-from-file (mime "data/mime7" :element-type '(unsigned-byte 8))
+    (let ((parts (read-mime mime "AaB03x" #'simple-test-callback)))
+      (is (= 1 (length parts)))
+      (destructuring-bind (files)
+          parts
+        (is (string= "form-data" (header-value (get-header files "Content-Disposition"))))
+        (is (equalp (content files)
+                    (map-into (make-array 9 :element-type '(unsigned-byte 8))
+                              #'char-code
+                              (list #\- #\- #\- #\- #\A #\a #\B #\0 #\3))))))))
+
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Copyright (c) 2005 Edward Marco Baringer
 ;; 
