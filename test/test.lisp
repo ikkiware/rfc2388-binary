@@ -172,10 +172,24 @@
       (destructuring-bind (files)
           parts
         (is (string= "form-data" (header-value (get-header files "Content-Disposition"))))
-        (is (equalp (content files)
-                    (map-into (make-array 9 :element-type '(unsigned-byte 8))
-                              #'char-code
-                              (list #\- #\- #\- #\- #\A #\a #\B #\0 #\3))))))))
+        (is (equalp (content files) (string-to-vector "----AaB03")))))))
+
+(test read-binary
+  (with-input-from-file (mime (data-file "mime8") :element-type '(unsigned-byte 8))
+    (let ((parts (read-mime mime "----------hUrrH2HCA6fHrlQsvCv5qD" #'simple-test-callback)))
+      (is (= 4 (length parts)))
+      (destructuring-bind (s f a file) parts
+ 	(is (equalp (string-to-vector "wTWkJQflmGAAAtiuGQjZfdliukKmDMrVxzXziwGq") (content s)))
+ 	(is (equalp (string-to-vector "NkPeoCRHHdAUgcTAWYkw") (content f)))
+ 	(is (equalp (string-to-vector "xovkAWwneq") (content a)))	; Won't do harm, might be useful.
+	(is (string= "form-data" (header-value (get-header file "Content-Disposition"))))
+	(is (string= "application/x-macbinary" (header-value (get-header file "Content-Type"))))
+	(print 'foo)
+	(is (equalp (content file)
+		    (make-array 512 :element-type '(unsigned-byte 8)
+				:initial-contents (nconc (loop for x from 0 to 255 collecting x)
+							 (loop for x from 255 downto 0 collecting x)))))
+	(print 'bar)))))
 
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Copyright (c) 2005 Edward Marco Baringer
