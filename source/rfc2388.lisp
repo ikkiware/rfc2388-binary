@@ -210,7 +210,7 @@ sequence."
                (incf queue-index))
              (parse-next-byte ()
                (debug-message "READ-UNTIL-NEXT-BOUNDARY: State: ~D;~% "
-                              state)               
+                              state)
                (setf byte (read-byte stream))
                (debug-message "                          Byte: ~D (~C) ==> " byte (code-char byte))
                (case byte
@@ -298,7 +298,7 @@ sequence."
 The returned strings may actually be displaced arrays."
   ;; another state machine:
   ;; |header-name|:|whitespace|header-value|CR|LF|
-  ;; 0             1          2               3 
+  ;; 0             1          2               3
   ;; |CR|LF
   ;; 0  4
   ;; If we find a CR LF sequence there's no header.
@@ -548,7 +548,7 @@ Either space or tab, in short."
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Modifications for TBNL Copyright (c) 2004 Michael Weber and Dr. Edmund Weitz
 ;; Copyright (c) 2005 Edward Marco Baringer
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions
 ;; are met:
