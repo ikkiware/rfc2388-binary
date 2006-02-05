@@ -124,6 +124,9 @@
    (lambda (mime-part)
      mime-part)))
 
+(defun string-to-vector (string)
+  (map 'vector #'char-code string))
+
 (test read-mime
   (with-input-from-file (mime "data/mime5" :element-type '(unsigned-byte 8))
     (read-mime mime "--AaB03x" #'simple-test-callback)
@@ -131,15 +134,9 @@
   (with-input-from-file (mime "data/mime5" :element-type '(unsigned-byte 8))
     (let ((parts (read-mime mime "--AaB03x" #'simple-test-callback)))
       (let ((larry (first parts)))
-        (is (equalp (content larry)
-                    (map-into (make-array 5 :element-type '(unsigned-byte 8))
-                              #'char-code
-                              (list #\L #\a #\r #\r #\y)))))
+        (is (equalp (content larry) (string-to-vector "Larry"))))
       (let ((file1 (second parts)))
-        (is (equalp (content file1)
-                    (map-into (make-array 9 :element-type '(unsigned-byte 8))
-                              #'char-code
-                              (list #\f #\i #\l #\e #\1 #\. #\t #\x #\t))))
+        (is (equalp (content file1) (string-to-vector "file1.txt")))
         (is (string= "text/plain" (content-type (second parts)))))
       (is (= 2 (length parts))))))
 
@@ -152,19 +149,10 @@
       (is (= 3 (length parts)))
       (destructuring-bind (file1 file2 larry)
           parts
-        (is (equalp (content larry)
-                    (map-into (make-array 5 :element-type '(unsigned-byte 8))
-                              #'char-code
-                              (list #\L #\a #\r #\r #\y))))
+        (is (equalp (content larry) (string-to-vector "Larry")))
         (is (string= "form-data" (header-value (get-header larry "Content-Disposition"))))
-        (is (equalp (content file1)
-                    (map-into (make-array 9 :element-type '(unsigned-byte 8))
-                              #'char-code
-                              (list #\f #\i #\l #\e #\1 #\. #\t #\x #\t))))
-        (is (equalp (content file2)
-                    (map-into (make-array 9 :element-type '(unsigned-byte 8))
-                              #'char-code
-                              (list #\f #\i #\l #\e #\2 #\. #\g #\i #\f))))))))
+        (is (equalp (content file1) (string-to-vector "file1.txt")))
+        (is (equalp (content file2) (string-to-vector "file2.gif")))))))
 
 (test read-mime-multipart2
   (with-input-from-file (mime "data/mime7" :element-type '(unsigned-byte 8))
