@@ -6,6 +6,17 @@
 
 (in-suite :rfc2388)
 
+(defvar *test-data-dir*
+  (make-pathname :directory
+		 (append (pathname-directory
+			  #.(or *compile-file-pathname*
+				*load-pathname*
+				*default-pathname-defaults*))
+			 '("data"))))
+
+(defun data-file (filename)
+  (merge-pathnames filename *test-data-dir*))
+
 (test parse-key-values
   (macrolet ((test-key-values (bind string &body body)
                `(destructuring-bind ,bind
@@ -64,14 +75,14 @@
   (is (char= #\A (rfc2388::as-ascii-char 65))))
 
 (test empty-data
-  (with-input-from-file (mime "data/mime1" :element-type '(unsigned-byte 8))
+  (with-input-from-file (mime (data-file "mime1") :element-type '(unsigned-byte 8))
     (is-true
      (rfc2388::read-until-next-boundary mime
                                         (rfc2388::ascii-string-to-boundary-array "12345678")
                                         (lambda (byte)
                                           (declare (ignore byte))
                                           (fail)))))
-  (with-input-from-file (mime "data/mime2" :element-type '(unsigned-byte 8))
+  (with-input-from-file (mime (data-file "mime2") :element-type '(unsigned-byte 8))
     (is-false
      (rfc2388::read-until-next-boundary mime
                                         (rfc2388::ascii-string-to-boundary-array "12345678")
@@ -80,7 +91,7 @@
 
 (test hello-world
   (with-output-to-string (hello-world)
-    (with-input-from-file (mime "data/mime3" :element-type '(unsigned-byte 8))
+    (with-input-from-file (mime (data-file "mime3") :element-type '(unsigned-byte 8))
       (is-true
        (rfc2388::read-until-next-boundary mime
                                           (rfc2388::ascii-string-to-boundary-array "12345678")
@@ -88,7 +99,7 @@
                                             (write-char (code-char byte) hello-world))))
       (is (string= "hello, world!" (get-output-stream-string hello-world)))))
   (with-output-to-string (hello-world)
-    (with-input-from-file (mime "data/mime4" :element-type '(unsigned-byte 8))
+    (with-input-from-file (mime (data-file "mime4") :element-type '(unsigned-byte 8))
       (is-true
        (rfc2388::read-until-next-boundary mime
                                           (rfc2388::ascii-string-to-boundary-array "12345678")
@@ -103,7 +114,7 @@
       (is (string= "hello, world!" (get-output-stream-string hello-world))))))
 
 (test parse-header
-  (with-input-from-file (header "data/header1"
+  (with-input-from-file (header (data-file "header1")
                                 :element-type '(unsigned-byte 8))
     (multiple-value-bind (found-header header-name header-value)
         (rfc2388::read-next-header header)
@@ -128,10 +139,10 @@
   (map 'vector #'char-code string))
 
 (test read-mime
-  (with-input-from-file (mime "data/mime5" :element-type '(unsigned-byte 8))
+  (with-input-from-file (mime (data-file "mime5") :element-type '(unsigned-byte 8))
     (read-mime mime "--AaB03x" #'simple-test-callback)
     (pass))
-  (with-input-from-file (mime "data/mime5" :element-type '(unsigned-byte 8))
+  (with-input-from-file (mime (data-file "mime5") :element-type '(unsigned-byte 8))
     (let ((parts (read-mime mime "--AaB03x" #'simple-test-callback)))
       (let ((larry (first parts)))
         (is (equalp (content larry) (string-to-vector "Larry"))))
@@ -141,10 +152,10 @@
       (is (= 2 (length parts))))))
 
 (test read-mime-multipart
-  (with-input-from-file (mime "data/mime6" :element-type '(unsigned-byte 8))
+  (with-input-from-file (mime (data-file "mime6") :element-type '(unsigned-byte 8))
     (read-mime mime "AaB03x" #'simple-test-callback)
     (pass))
-  (with-input-from-file (mime "data/mime6" :element-type '(unsigned-byte 8))
+  (with-input-from-file (mime (data-file "mime6") :element-type '(unsigned-byte 8))
     (let ((parts (read-mime mime "AaB03x" #'simple-test-callback)))
       (is (= 3 (length parts)))
       (destructuring-bind (file1 file2 larry)
@@ -155,7 +166,7 @@
         (is (equalp (content file2) (string-to-vector "file2.gif")))))))
 
 (test read-mime-multipart2
-  (with-input-from-file (mime "data/mime7" :element-type '(unsigned-byte 8))
+  (with-input-from-file (mime (data-file "mime7") :element-type '(unsigned-byte 8))
     (let ((parts (read-mime mime "AaB03x" #'simple-test-callback)))
       (is (= 1 (length parts)))
       (destructuring-bind (files)
