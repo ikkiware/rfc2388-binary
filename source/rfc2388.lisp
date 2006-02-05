@@ -222,8 +222,8 @@ sequence."
                      (setf state 9)
                      (enqueue-byte))
                     (t (setf state 0)
-                       (flush-queued-bytes)
-                       (handle-byte))))
+		       (enqueue-byte)
+                       (flush-queued-bytes))))
                  (10 ;; Line-Feed
                   (case state
                     (1 (setf state 2)
@@ -233,8 +233,8 @@ sequence."
                      (return-from read-until-next-boundary
                        (values more-data)))
                     (t (setf state 0)
-                       (flush-queued-bytes)
-                       (handle-byte))))
+		       (enqueue-byte)
+                       (flush-queued-bytes))))
                  (45 ;; Dash
                   (case state
                     (2 (setf state 3)
@@ -251,15 +251,15 @@ sequence."
                              (setf state 5)))
                          (progn
                            (setf state 0)
-                           (flush-queued-bytes)
-                           (handle-byte))))
+			   (enqueue-byte)
+                           (flush-queued-bytes))))
                     (5 (setf state 6)
                        (enqueue-byte))
                     (6 (setf state 7)
                        (setf more-data nil))
                     (t (setf state 0)
-                       (flush-queued-bytes)
-                       (handle-byte))))
+		       (enqueue-byte)
+                       (flush-queued-bytes))))
                  (t
                   (cond
                     ((and (or (= 5 state)
@@ -274,10 +274,11 @@ sequence."
                      (when (= boundary-index boundary-length)
                        ;; done with the boundary
                        (setf state 5)))
-                    ((= 4 state)
+                    ((or (= 1 state)
+			 (= 4 state))
                      (setf state 0)
-                     (flush-queued-bytes)
-                     (handle-byte))
+		     (enqueue-byte)
+                     (flush-queued-bytes))
                     (t (setf state 0)
                        (handle-byte)))))
                (debug-message "~S;~%" state)))
