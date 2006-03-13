@@ -208,6 +208,10 @@ sequence."
              (enqueue-byte ()
                (setf (aref queued-bytes queue-index) byte)
                (incf queue-index))
+             (reset-state ()
+               (enqueue-byte)
+               (flush-queued-bytes)
+               (setf state 0))
              (parse-next-byte ()
                (debug-message "READ-UNTIL-NEXT-BOUNDARY: State: ~D;~% "
                               state)
@@ -221,9 +225,7 @@ sequence."
                     ((5 7 8)
                      (setf state 9)
                      (enqueue-byte))
-                    (t (setf state 0)
-		       (enqueue-byte)
-                       (flush-queued-bytes))))
+                    (t (reset-state))))
                  (10 ;; Line-Feed
                   (case state
                     (1 (setf state 2)
@@ -232,9 +234,7 @@ sequence."
                      (debug-message "Term.~%")
                      (return-from read-until-next-boundary
                        (values more-data)))
-                    (t (setf state 0)
-		       (enqueue-byte)
-                       (flush-queued-bytes))))
+                    (t (reset-state))))
                  (45 ;; Dash
                   (case state
                     (2 (setf state 3)
@@ -249,10 +249,7 @@ sequence."
                            (when (= boundary-index boundary-length)
                              ;; done with the boundary
                              (setf state 5)))
-                         (progn
-                           (setf state 0)
-			   (enqueue-byte)
-                           (flush-queued-bytes))))
+                         (reset-state)))
                     (5 (setf state 6)
                        (enqueue-byte))
                     (6 (setf state 7)
@@ -276,11 +273,10 @@ sequence."
                        (setf state 5)))
                     ((or (= 1 state)
 			 (= 4 state))
-                     (setf state 0)
-		     (enqueue-byte)
-                     (flush-queued-bytes))
+                     (reset-state))
                     (t (setf state 0)
-                       (handle-byte)))))
+                       (enqueue-byte)
+                       (flush-queued-bytes)))))
                (debug-message "~S;~%" state)))
       (loop
          ;; this loop will exit when one of two conditions occur:
