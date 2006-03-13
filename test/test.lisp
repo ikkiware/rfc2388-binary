@@ -6,13 +6,11 @@
 
 (in-suite :rfc2388)
 
-(defvar *test-data-dir*
+(defparameter *test-data-dir*
   (make-pathname :directory
 		 (append (pathname-directory
-			  #.(or *compile-file-pathname*
-				*load-pathname*
-				*default-pathname-defaults*))
-			 '("data"))))
+                          #.(asdf:component-pathname (asdf:find-system :rfc2388.test)))
+                  '("test" "data"))))
 
 (defun data-file (filename)
   (merge-pathnames filename *test-data-dir*))
