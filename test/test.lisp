@@ -182,12 +182,48 @@
  	(is (equalp (string-to-vector "xovkAWwneq") (content a)))	; Won't do harm, might be useful.
 	(is (string= "form-data" (header-value (get-header file "Content-Disposition"))))
 	(is (string= "application/x-macbinary" (header-value (get-header file "Content-Type"))))
-	(print 'foo)
 	(is (equalp (content file)
 		    (make-array 512 :element-type '(unsigned-byte 8)
 				:initial-contents (nconc (loop for x from 0 to 255 collecting x)
-							 (loop for x from 255 downto 0 collecting x)))))
-	(print 'bar)))))
+							 (loop for x from 255 downto 0 collecting x)))))))))
+
+(test random-junk
+  (for-all ((random-byte-buffer (gen-buffer :length (gen-integer :min (expt 2 0) :max (expt 2 10)))
+                                (not (search "----------hUrrH2HCA6fHrlQsvCv5qD"
+                                             random-byte-buffer))))
+    (with-output-to-file (mime (data-file "mime9")
+                               :element-type '(unsigned-byte 8)
+                               :if-exists :supersede)
+      (flet ((%line (data)
+               (write-sequence (string-to-vector data) mime)
+               (write-byte 13 mime)
+               (write-byte 10 mime)))
+        (%line "------------hUrrH2HCA6fHrlQsvCv5qD")
+        (%line "Content-Disposition: form-data; name=\"IujzYaQDEj\"; filename=\"foo.bin\"") ;
+        (%line "Content-Type: application/octet-stream")
+        (%line "")
+        (write-sequence random-byte-buffer mime)
+        (write-byte 13 mime)
+        (write-byte 10 mime)
+        (%line "------------hUrrH2HCA6fHrlQsvCv5qD--")))
+    (with-input-from-file (mime (data-file "mime9") :element-type '(unsigned-byte 8))
+      (let ((parts (read-mime mime "----------hUrrH2HCA6fHrlQsvCv5qD" #'simple-test-callback)))
+        (is (= 1 (length parts)))
+        (destructuring-bind (file) parts
+          (is (= (length random-byte-buffer) (length (content file)))
+              "Wrote ~D bytes, got ~D back." (length random-byte-buffer) (length (content file)))
+          (loop
+             for index upfrom 0 below (min (length random-byte-buffer)
+                                           (length (content file)))
+             do (is (= (aref random-byte-buffer index)
+                       (aref (content file) index))
+                    "Bytes at offset ~D differ (length: ~D; on-disk: ~D; returned: ~D)"
+                    index
+                    (length random-byte-buffer)
+                    (aref random-byte-buffer index)
+                    (aref (content file) index)))
+          (is (string= "form-data" (header-value (get-header file "Content-Disposition"))))
+          (is (string= "application/octet-stream" (header-value (get-header file "Content-Type")))))))))
 
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Copyright (c) 2005 Edward Marco Baringer
