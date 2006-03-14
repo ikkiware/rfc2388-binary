@@ -109,7 +109,8 @@
                                           (rfc2388::ascii-string-to-boundary-array "12345678")
                                           (lambda (byte)
                                             (write-char (code-char byte) hello-world))))
-      (is (string= "hello, world!" (get-output-stream-string hello-world))))))
+      (is (string= "
+hello, world!" (get-output-stream-string hello-world))))))
 
 (test parse-header
   (with-input-from-file (header (data-file "header1")
@@ -188,7 +189,12 @@
 							 (loop for x from 255 downto 0 collecting x)))))))))
 
 (test random-junk
-  (for-all ((random-byte-buffer (gen-buffer :length (gen-integer :min (expt 2 0) :max (expt 2 10)))
+  (for-all ((random-byte-buffer (gen-buffer :length (gen-integer :min (expt 2 0) :max (expt 2 4))
+                                            :elements (gen-one-element
+                                                       (char-code #\-)
+                                                       10
+                                                       13
+                                                       (char-code #\Space)))
                                 (not (search "----------hUrrH2HCA6fHrlQsvCv5qD"
                                              random-byte-buffer))))
     (with-output-to-file (mime (data-file "mime9")
@@ -215,13 +221,14 @@
           (loop
              for index upfrom 0 below (min (length random-byte-buffer)
                                            (length (content file)))
-             do (is (= (aref random-byte-buffer index)
-                       (aref (content file) index))
-                    "Bytes at offset ~D differ (length: ~D; on-disk: ~D; returned: ~D)"
-                    index
-                    (length random-byte-buffer)
-                    (aref random-byte-buffer index)
-                    (aref (content file) index)))
+             do (when (/= (aref random-byte-buffer index)
+                          (aref (content file) index))
+                  (fail 
+                   "Bytes at offset ~D differ (length: ~D; on-disk: ~D; returned: ~D)"
+                   index
+                   (length random-byte-buffer)
+                   (aref random-byte-buffer index)
+                   (aref (content file) index))))
           (is (string= "form-data" (header-value (get-header file "Content-Disposition"))))
           (is (string= "application/octet-stream" (header-value (get-header file "Content-Type")))))))))
 
