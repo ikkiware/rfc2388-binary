@@ -10,6 +10,7 @@
    #:read-mime
 
    #:mime-part
+   #:mime-part-p
    #:content
    #:content-type
    #:content-length

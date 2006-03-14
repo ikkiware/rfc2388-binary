@@ -49,6 +49,10 @@ Example:
    (content-charset :accessor content-charset :initform nil)
    (headers :accessor headers :initform '())))
 
+(defgeneric mime-part-p (object)
+  (:method ((object mime-part)) t)
+  (:method ((object t)) nil))
+
 (defmethod print-mime-part ((part mime-part) &optional (stream *trace-output*))
   (dolist (header (headers part))
     (format stream "~S: ~S~:{; ~S=~S~}~%"
