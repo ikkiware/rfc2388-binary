@@ -229,7 +229,10 @@ sequence."
                     ((5 7 8)
                      (setf state 9)
                      (enqueue-byte))
-                    (t (reset-state))))
+                    (t (setf state 1)
+                       (flush-queued-bytes)
+                       (setf byte 13)
+                       (enqueue-byte))))
                  (10 ;; Line-Feed
                   (case state
                     (1 (setf state 2)
