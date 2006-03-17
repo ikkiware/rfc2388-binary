@@ -360,7 +360,7 @@ The returned strings may actually be displaced arrays."
 (defun parse-key-values (key-value-string)
   "Returns an alist of the keys and values in KEY-VALUE-STRING.
 
-KEY-VALUE-STRING is of the form: (\w+=\w+;)*"
+KEY-VALUE-STRING is of the form: (\w+=\"\w+\";)*"
   (declare (optimize (speed 3) (safety 0) (debug 0))
            (type (array character (*)) key-value-string))
   (flet ((make-adjustable-string (&optional (default-size 20))
@@ -382,7 +382,9 @@ KEY-VALUE-STRING is of the form: (\w+=\w+;)*"
                      (setf key (make-adjustable-string)
                            value (make-adjustable-string))))
               (if (eql :escape state)
-                  (extend value)
+                  (progn
+                    (extend value)
+                    (setf state :in-double-quote))
                   (case char
                     (#\=
                      (ecase state
