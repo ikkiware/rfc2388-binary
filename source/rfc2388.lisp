@@ -306,7 +306,8 @@ The returned strings may actually be displaced arrays."
   ;; |CR|LF
   ;; 0  4
   ;; If we find a CR LF sequence there's no header.
-  (declare (optimize (speed 3) (safety 0) (debug 0)))
+  #-allegro (declare (optimize (speed 3) (safety 0) (debug 0)))
+  #+allegro (declare (optimize (speed 3) (debug 0)))
   (let ((state 0)
         (byte 0)
         (header-name (make-array 256 :element-type 'character :adjustable t :fill-pointer 0))
