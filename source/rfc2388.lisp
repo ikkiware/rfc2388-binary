@@ -480,9 +480,13 @@ Either space or tab, in short."
 
 (defun as-ascii-char (byte)
   "Assuming BYTE is an ASCII coded character retun the corresponding character."
-  (case byte
-    (32 #\Space)
-    (9 #\Tab)
+  (cond
+    ((eq 32 byte)  #\Space)
+    ((eq 9 byte) #\Tab)
+    ((or (> byte 127)
+	 (< byte 33))
+     (debug-message "Non-ascii chars found in request, filename may be incorrect.~%")
+     #\X)
     (t (aref (load-time-value
               "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~")
              (- byte 33)))))
