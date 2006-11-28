@@ -399,51 +399,43 @@ KEY-VALUE-STRING is of the form: (\w+=\"\w+\";)*"
                      (push (cons key value) keys-and-values)
                      (setf key (make-adjustable-string)
                            value (make-adjustable-string))))
-              (if (eql :escape state)
-                  (progn
-                    (extend value)
-                    (setf state :in-double-quote))
-                  (case char
-                    (#\=
-                     (ecase state
-                       ((:in-double-quote :in-value)
-                        (extend value))
-                       (:in-key
-                        (setf state :in-value))))
-                    (#\;
-                     (ecase state
-                       (:in-double-quote
-                        (extend value))
-                       ((:in-value :post-value)
-                        (finish-value))))
-                    (#\"
-                     (ecase state
-                       (:in-double-quote
-                        (setf state :post-value))
-                       (:in-value
-                        (setf state :in-double-quote))))
-                    ((#\Space #\Tab)
-                     (ecase state
-                       (:in-value
-                        (setf state :post-value))
-                       ((:pre-key :post-value)
-                        nil)
-                       (:in-double-quote
-                        (extend value))))
-                    (#\\
-                     (ecase state
-                       (:in-double-quote
-                        (setf state :escape))))
-                    (t
-                     (ecase state
-                       ((:in-double-quote :in-value)
-                        (extend value))
-                       (:pre-key
-                        (extend key)
-                        (setf state :in-key))
-                       (:in-key
-                        (extend key)))))))
-           finally (unless (string= "" key)
+	      (case char
+		(#\=
+		 (ecase state
+		   ((:in-double-quote :in-value)
+		    (extend value))
+		   (:in-key
+		    (setf state :in-value))))
+		(#\;
+		 (ecase state
+		   (:in-double-quote
+		    (extend value))
+		   ((:in-value :post-value)
+		    (finish-value))))
+		(#\"
+		 (ecase state
+		   (:in-double-quote
+		    (setf state :post-value))
+		   (:in-value
+		    (setf state :in-double-quote))))
+		((#\Space #\Tab)
+		 (ecase state
+		   (:in-value
+		    (setf state :post-value))
+		   ((:pre-key :post-value)
+		    nil)
+		   (:in-double-quote
+		    (extend value))))
+		(t
+		 (ecase state
+		   ((:in-double-quote :in-value)
+		    (extend value))
+		   (:pre-key
+		    (extend key)
+		    (setf state :in-key))
+		   (:in-key
+		    (extend key))))))
+	 finally (unless (string= "" key)
                      (push (cons key value) keys-and-values)))
       (nreverse keys-and-values))))
 
