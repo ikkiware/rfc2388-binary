@@ -196,118 +196,90 @@ The ASSUME-FIRST-BOUNDARY parameter should T if we're reading the
 first part of a MIME message, where there is no leading CR LF
 sequence."
   ;; Read until  CR|LF|-|-|boundary|-|-|transport-padding|CR|LF
-  ;; States:    0  1  2 3 4        5 6 7                 8  9  10
+  ;; States:    0  1  2 3 4        5 6 7                    8
   ;; States 6 and 7 are optional
   (declare (optimize (speed 3) (safety 0) (debug 0))
            (type (simple-array (unsigned-byte 8) (*)) boundary)
            (type (function ((unsigned-byte 8)) t) data-handler))
-  (let ((queued-bytes (make-array 74 :element-type '(unsigned-byte 8)))
-        (queue-index 0)
-        (boundary-index 0)
-        (boundary-length (length boundary))
-        (state (if assume-first-boundary
-                   2
-                   0))
-        (byte 0)
-        (more-data t))
-    (declare (type (simple-array (unsigned-byte 8) (74)) queued-bytes)
-             (type (integer 0 74) queue-index)
-             (type (integer 0 70) boundary-index)
-             (type (integer 1 70) boundary-length)
-             (type (integer 0 10) state)
-             (type (unsigned-byte 8) byte)
+  (let* ((queue (make-array 80 :element-type '(unsigned-byte 8)))
+	 (queue-pos 0)
+	 (boundary-pos 0)
+	 (boundary-length (length boundary))
+	 (state (if assume-first-boundary 2 0))
+	 (more-data t))
+    (declare (type (simple-array (unsigned-byte 8) (80)) queue)
+             (type fixnum queue-pos boundary-pos boundary-length state)
              (type boolean more-data))
-    (labels ((handle-byte ()
-               (debug-message "READ-UNTIL-NEXT-BOUNDARY: Handling byte ~D (~C)~%"
-                      byte (code-char byte))
-               (funcall data-handler byte))
-             (flush-queued-bytes ()
-               (dotimes (i queue-index)
-                 (setf byte (aref queued-bytes i))
-                 (handle-byte))
-               (setf queue-index 0))
-             (enqueue-byte ()
-               (setf (aref queued-bytes queue-index) byte)
-               (incf queue-index))
-             (reset-state ()
-               (enqueue-byte)
-               (flush-queued-bytes)
-               (setf state 0))
-             (parse-next-byte ()
-               (debug-message "READ-UNTIL-NEXT-BOUNDARY: State: ~D;~% "
-                              state)
-               (setf byte (read-byte stream))
-               (debug-message "                          Byte: ~D (~C) ==> " byte (code-char byte))
-               (case byte
-                 (13 ;; Carriage-Return
-                  (case state
-                    (0 (setf state 1)
-                       (enqueue-byte))
-                    ((5 7 8)
-                     (setf state 9)
-                     (enqueue-byte))
-                    (t (setf state 1)
-                       (flush-queued-bytes)
-                       (setf byte 13)
-                       (enqueue-byte))))
-                 (10 ;; Line-Feed
-                  (case state
-                    (1 (setf state 2)
-                       (enqueue-byte))
-                    (9 ;; all done.
-                     (debug-message "Term.~%")
-                     (return-from read-until-next-boundary
-                       (values more-data)))
-                    (t (reset-state))))
-                 (45 ;; Dash
-                  (case state
-                    (2 (setf state 3)
-                       (enqueue-byte))
-                    (3 (setf state 4)
-                       (enqueue-byte))
-                    (4 ;; dashes can be part of the boundary :(
-                     (if (= byte (aref boundary boundary-index))
-                         (progn
-                           (incf boundary-index)
-                           (enqueue-byte)
-                           (when (= boundary-index boundary-length)
-                             ;; done with the boundary
-                             (setf state 5)))
-                         (reset-state)))
-                    (5 (setf state 6)
-                       (enqueue-byte))
-                    (6 (setf state 7)
-                       (setf more-data nil))
-                    (t (setf state 0)
-		       (enqueue-byte)
-                       (flush-queued-bytes))))
-                 (t
-                  (cond
-                    ((and (or (= 5 state)
-                              (= 7 state))
-                          (lwsp-char-p byte))
-                     ;; transport-padding. do nothing.
-                     nil)
-                    ((and (= 4 state)
-                          (= byte (aref boundary boundary-index)))
-                     (incf boundary-index)
-                     (enqueue-byte)
-                     (when (= boundary-index boundary-length)
-                       ;; done with the boundary
-                       (setf state 5)))
-                    ((or (= 1 state)
-			 (= 4 state))
-                     (reset-state))
-                    (t (setf state 0)
-                       (enqueue-byte)
-                       (flush-queued-bytes)))))
-               (debug-message "~S;~%" state)))
-      (loop
-         ;; this loop will exit when one of two conditions occur:
-         ;; 1) we hit an EOF in the stream
-         ;; 2) we read the next boundary and return. (see the
-         ;;    return-from form in the hnadler for the +LF+ char.
-         (parse-next-byte)))))
+    (labels ((flush-queue (next-byte)
+	       (declare (type (unsigned-byte 8) next-byte))
+	       (let ((old-queue-pos queue-pos))
+		 (setf boundary-pos 0
+		       queue-pos 0
+		       more-data t
+		       state 0)
+		 (funcall data-handler (elt queue 0))
+		 (loop :for i :from 1 :below old-queue-pos
+		       :do (handle-byte (elt queue i))))
+	       (handle-byte next-byte))
+	     (enqueue-byte (byte)
+	       (declare (type (unsigned-byte 8) byte))
+	       (setf (elt queue queue-pos) byte)
+	       (incf queue-pos))
+	     (handle-byte (byte)
+	       (declare (type (unsigned-byte 8) byte))
+	       (ecase state
+		 (0 (cond ((= byte #.(char-code #\return))
+			   (enqueue-byte byte)
+			   (incf state))
+			  (t
+			   (funcall data-handler byte))))
+		 (1 (cond ((= byte #.(char-code #\newline))
+			   (enqueue-byte byte)
+			   (incf state))
+			  (t
+			   (flush-queue byte))))
+		 ((2 3) (cond ((= byte #.(char-code #\-))
+			       (enqueue-byte byte)
+			       (incf state))
+			      (t
+			       (flush-queue byte))))
+		 (4 (cond ((= boundary-pos boundary-length)
+			   (incf state)
+			   (handle-byte byte))
+			  ((= byte (elt boundary boundary-pos))
+			   (enqueue-byte byte)
+			   (incf boundary-pos))
+			  (t
+			   (flush-queue byte))))
+		 (5 (cond ((= byte #.(char-code #\-))
+			   (enqueue-byte byte)
+			   (incf state))
+			  ((lwsp-char-p byte)
+			   (enqueue-byte byte)
+			   (setf state 7))
+			  ((= byte #.(char-code #\return))
+			   (enqueue-byte byte)
+			   (setf state 8))
+			  (t
+			   (flush-queue byte))))
+		 (6 (cond ((= byte #.(char-code #\-))
+			   (enqueue-byte byte)
+			   (incf state)
+			   (setf more-data nil))
+			  (t
+			   (flush-queue byte))))
+		 (7 (cond ((lwsp-char-p byte)
+			   (enqueue-byte byte))
+			  ((= byte #.(char-code #\return))
+			   (enqueue-byte byte)
+			   (incf state))
+			  (t
+			   (flush-queue byte))))
+		 (8 (cond ((= byte #.(char-code #\newline))
+			   (return-from read-until-next-boundary more-data))
+			  (t
+			   (flush-queue byte)))))))
+      (loop (handle-byte (read-byte stream))))))
 
 (defun read-next-header (stream)
   "Reads the next header from STREAM. Returns, as the first
