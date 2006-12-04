@@ -150,6 +150,30 @@ hello, world!" (get-output-stream-string hello-world))))))
         (is (string= "text/plain" (content-type (second parts)))))
       (is (= 2 (length parts))))))
 
+(defun test-read-until-boundary (file)
+  (let ((more-data nil))
+    (values
+     (with-output-to-string (out)
+       (with-input-from-file (mime (data-file file) :element-type '(unsigned-byte 8))
+	 (setf more-data
+	       (rfc2388::read-until-next-boundary mime (rfc2388::ascii-string-to-boundary-array "12345678")
+						  (lambda (byte) (write-char (code-char byte) out))))))
+     more-data)))
+
+(test read-until-next-boundary
+  (multiple-value-bind (content more-data) (test-read-until-boundary "mime10")
+    (if (and (string= content (format nil "abc~A~A--123456" #\return #\newline))
+	     more-data)
+	(pass)
+	(fail))))
+
+(test read-until-next-boundary2
+  (multiple-value-bind (content more-data) (test-read-until-boundary "mime11")
+    (if (and (string= content (format nil "abc~A~A--123456" #\return #\newline))
+	     (not more-data))
+	(pass)
+	(fail))))
+
 (test read-mime-multipart
   (with-input-from-file (mime (data-file "mime6") :element-type '(unsigned-byte 8))
     (read-mime mime "AaB03x" #'simple-test-callback)
