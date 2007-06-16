@@ -2,7 +2,7 @@
 
 (in-package :cl-user)
 
-(defpackage :rfc2388
+(defpackage :rfc2388-binary
   (:use :common-lisp)
   (:export
 

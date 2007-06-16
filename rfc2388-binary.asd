@@ -8,7 +8,7 @@
 
 (in-package :rfc2388.system)
 
-(defsystem :rfc2388
+(defsystem :rfc2388-binary
   :components ((:static-file "rfc2388.asd")
                (:module :source
                 :components ((:file "packages")

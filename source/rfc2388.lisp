@@ -1,6 +1,6 @@
 ;; -*- lisp -*-
 
-(in-package :rfc2388)
+(in-package :rfc2388-binary)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defparameter *debug* nil
