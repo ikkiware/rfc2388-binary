@@ -1,15 +1,15 @@
 ;; -*- lisp -*-
 
-(in-package :rfc2388.test)
+(in-package :rfc2388-binary.test)
 
-(def-suite :rfc2388)
+(def-suite :rfc2388-binary)
 
-(in-suite :rfc2388)
+(in-suite :rfc2388-binary)
 
 (defparameter *test-data-dir*
   (make-pathname :directory
 		 (append (pathname-directory
-                          #.(asdf:component-pathname (asdf:find-system :rfc2388.test)))
+                          #.(asdf:component-pathname (asdf:find-system :rfc2388-binary.test)))
                   '("test" "data"))))
 
 (defun data-file (filename)
@@ -18,7 +18,7 @@
 (test parse-key-values
   (macrolet ((test-key-values (bind string &body body)
                `(destructuring-bind ,bind
-                    (rfc2388::parse-key-values ,string)
+                    (rfc2388-binary::parse-key-values ,string)
                   ,@body)))
     (test-key-values ((foo . bar)) "foo=bar"
       (is (string= "foo" foo))
@@ -42,20 +42,20 @@
 
 (test parse-header-value
   (multiple-value-bind (form-data attributes)
-      (rfc2388::parse-header-value "form-data")
+      (rfc2388-binary::parse-header-value "form-data")
     (is (string= "form-data" form-data))
     (is (null attributes)))
   (multiple-value-bind (form-data attributes)
-      (rfc2388::parse-header-value "form-data;")
+      (rfc2388-binary::parse-header-value "form-data;")
     (is (string= "form-data" form-data))
     (is (null attributes)))
   (multiple-value-bind (form-data attributes)
-      (rfc2388::parse-header-value "form-data; a=b")
+      (rfc2388-binary::parse-header-value "form-data; a=b")
     (is (string= "form-data" form-data))
     (is (string= "a" (caar attributes)))
     (is (string= "b" (cdar attributes))))
   (multiple-value-bind (form-data attributes)
-      (rfc2388::parse-header-value "form-data; a=b ; c=\"d\"")
+      (rfc2388-binary::parse-header-value "form-data; a=b ; c=\"d\"")
     (is (string= "form-data" form-data))
     (destructuring-bind ((a . b) (c . d))
         attributes
@@ -65,25 +65,25 @@
       (is (string= "d" d)))))
 
 (test as-ascii-char
-  (is (char= #\Space (rfc2388::as-ascii-char 32)))
-  (is (char= #\Tab (rfc2388::as-ascii-char 9)))
-  (is (char= #\! (rfc2388::as-ascii-char 33)))
-  (is (char= #\: (rfc2388::as-ascii-char 58)))
-  (is (char= #\a (rfc2388::as-ascii-char 97)))
-  (is (char= #\A (rfc2388::as-ascii-char 65))))
+  (is (char= #\Space (rfc2388-binary::as-ascii-char 32)))
+  (is (char= #\Tab (rfc2388-binary::as-ascii-char 9)))
+  (is (char= #\! (rfc2388-binary::as-ascii-char 33)))
+  (is (char= #\: (rfc2388-binary::as-ascii-char 58)))
+  (is (char= #\a (rfc2388-binary::as-ascii-char 97)))
+  (is (char= #\A (rfc2388-binary::as-ascii-char 65))))
 
 (test empty-data
   (with-input-from-file (mime (data-file "mime1") :element-type '(unsigned-byte 8))
     (is-true
-     (rfc2388::read-until-next-boundary mime
-                                        (rfc2388::ascii-string-to-boundary-array "12345678")
+     (rfc2388-binary::read-until-next-boundary mime
+                                        (rfc2388-binary::ascii-string-to-boundary-array "12345678")
                                         (lambda (byte)
                                           (declare (ignore byte))
                                           (fail)))))
   (with-input-from-file (mime (data-file "mime2") :element-type '(unsigned-byte 8))
     (is-false
-     (rfc2388::read-until-next-boundary mime
-                                        (rfc2388::ascii-string-to-boundary-array "12345678")
+     (rfc2388-binary::read-until-next-boundary mime
+                                        (rfc2388-binary::ascii-string-to-boundary-array "12345678")
                                         (lambda (byte)
                                           (fail "Read char byte ~D (~C), why?" byte (code-char byte)))))))
 
@@ -91,22 +91,22 @@
   (with-output-to-string (hello-world)
     (with-input-from-file (mime (data-file "mime3") :element-type '(unsigned-byte 8))
       (is-true
-       (rfc2388::read-until-next-boundary mime
-                                          (rfc2388::ascii-string-to-boundary-array "12345678")
+       (rfc2388-binary::read-until-next-boundary mime
+                                          (rfc2388-binary::ascii-string-to-boundary-array "12345678")
                                           (lambda (byte)
                                             (write-char (code-char byte) hello-world))))
       (is (string= "hello, world!" (get-output-stream-string hello-world)))))
   (with-output-to-string (hello-world)
     (with-input-from-file (mime (data-file "mime4") :element-type '(unsigned-byte 8))
       (is-true
-       (rfc2388::read-until-next-boundary mime
-                                          (rfc2388::ascii-string-to-boundary-array "12345678")
+       (rfc2388-binary::read-until-next-boundary mime
+                                          (rfc2388-binary::ascii-string-to-boundary-array "12345678")
                                           (lambda (byte)
                                             (declare (ignore byte))
                                             (fail))))
       (is-false
-       (rfc2388::read-until-next-boundary mime
-                                          (rfc2388::ascii-string-to-boundary-array "12345678")
+       (rfc2388-binary::read-until-next-boundary mime
+                                          (rfc2388-binary::ascii-string-to-boundary-array "12345678")
                                           (lambda (byte)
                                             (write-char (code-char byte) hello-world))))
       (is (string= "
@@ -116,11 +116,11 @@ hello, world!" (get-output-stream-string hello-world))))))
   (with-input-from-file (header (data-file "header1")
                                 :element-type '(unsigned-byte 8))
     (multiple-value-bind (found-header header-name header-value)
-        (rfc2388::read-next-header header)
+        (rfc2388-binary::read-next-header header)
       (is-true found-header)
       (is (string= "foo" header-name))
       (is (string= "bar" header-value)))
-    (is-false (rfc2388::read-next-header header))))
+    (is-false (rfc2388-binary::read-next-header header))))
 
 (defun simple-test-callback (partial-mime-part)
   (setf (content partial-mime-part)

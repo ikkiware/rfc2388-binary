@@ -2,10 +2,10 @@
 
 (in-package :cl-user)
 
-(defpackage :rfc2388.test
+(defpackage :rfc2388-binary.test
   (:use :common-lisp
         :5am
-        :rfc2388
+        :rfc2388-binary
         :arnesi))
 
 ;; Copyright (c) 2003 Janis Dzerins

@@ -14,11 +14,11 @@
                 :components ((:file "packages")
                              (:file "rfc2388" :depends-on ("packages"))))))
 
-(defsystem :rfc2388.test
+(defsystem :rfc2388-binary.test
   :components ((:module :test
                 :components ((:file "packages")
                              (:file "test" :depends-on ("packages")))))
-  :depends-on (:rfc2388 :fiveam))
+  :depends-on (:rfc2388-binary :fiveam))
 
 
 ;;;; * Parsing rfc2888 formatted data
