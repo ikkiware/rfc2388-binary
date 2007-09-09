@@ -9,7 +9,7 @@
 (in-package :rfc2388.system)
 
 (defsystem :rfc2388-binary
-  :components ((:static-file "rfc2388.asd")
+  :components ((:static-file "rfc2388-binary.asd")
                (:module :source
                 :components ((:file "packages")
                              (:file "rfc2388" :depends-on ("packages"))))))
