@@ -118,6 +118,7 @@ READ-MIME. See READ-MIME's documentation for details."
   (read-mime source (ascii-string-to-boundary-array boundary) callback))
 
 (defmethod read-mime ((source stream) (boundary array) callback)
+  (declare (optimize speed))
   ;; read up to the first part
   (read-until-next-boundary source boundary #'identity :assume-first-boundary t)
   ;; read headers and boundries until we're done
