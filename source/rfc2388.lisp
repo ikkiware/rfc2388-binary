@@ -19,15 +19,18 @@ SOURCE is either a vector of (unsigned-byte 8) or a stream whose
 element-type is (unsigned-byte 8). BOUNDARY is either a string of
 US-ASCII encodeable characters or a byte vector. CALLBACK is a
 function which will be passed one argument, a MIME-PART
-containing the headers of the mime part and must return two
+containing the headers of the mime part and must return the following
 values:
 
 - a byte-handler function. This is a one argument function which
   will be passed every byte in the mime part's content.
 
-- a termination function. This is a one argument function which
-  will be passed the mime-part and must return whatever is to be
-  returned from read-mime.
+- a termination function. This is a function without arguments
+  and will be called when the operation finishes without errors.
+  It must return whatever is to be returned from read-mime.
+
+- an optional abort function. This is a function without arguments
+  and will be called when the operation is aborted due to an error.
 
 READ-MIME consumes bytes from SOURCE and returns a list of the
 whatever the various termination functions returned.
@@ -40,7 +43,9 @@ Example:
                       (lambda (mime-part) mime-part))))
 
   This call would return a list of mime-part objects passing each
-  byte to collect-byte-somewhere."))
+byte to collect-byte-somewhere.
+
+You may also want to look at UCW for a real-world example."))
 
 (defclass mime-part ()
   ((content :accessor content :initform nil)
@@ -165,11 +170,19 @@ READ-MIME. See READ-MIME's documentation for details."
                                                           (declare (ignore byte))
                                                           (error "Bad data in mime stream."))
                                                         :assume-first-boundary t)))
-              (multiple-value-bind (byte-handler termination-callback)
+              (multiple-value-bind (byte-handler terminate-callback abort-callback)
                   (funcall callback part)
-                (unwind-protect
-                     (setf keep-on (read-until-next-boundary source boundary byte-handler))
-                  (push (funcall termination-callback part) parts)))))
+                (declare (type function byte-handler terminate-callback)
+                         (type (or null function) abort-callback))
+                (let ((ok nil))
+                  (unwind-protect
+                       (progn
+                         (setf keep-on (read-until-next-boundary source boundary byte-handler))
+                         (setf ok t))
+                    (if ok
+                        (push (funcall terminate-callback) parts)
+                        (when abort-callback
+                          (funcall abort-callback))))))))
      finally (return (nreverse parts))))
 
 (defun read-until-next-boundary (stream boundary data-handler &key assume-first-boundary)
