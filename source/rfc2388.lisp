@@ -502,6 +502,7 @@ Either space or tab, in short."
     ((eq 9 byte) #\Tab)
     ((or (> byte 127)
 	 (< byte 33))
+     ;; FIXME implement rfc2231. meanwhile we simply get rid of non-ascii characters...
      (debug-message "Non-ascii chars found in request, filename may be incorrect.~%")
      #\X)
     (t (aref (load-time-value
