@@ -59,14 +59,16 @@ You may also want to look at UCW for a real-world example."))
   (:method ((object t)) nil))
 
 (defmethod print-mime-part ((part mime-part) &optional (stream *trace-output*))
+  (format stream "Headers:~%")
   (dolist (header (headers part))
     (format stream "~S: ~S~:{; ~S=~S~}~%"
             (header-name header) (header-value header)
             (mapcar (lambda (attribute)
                       (list (car attribute) (cdr attribute)))
-                    (header-attributes header)))
-    (terpri stream)
-    (princ (content part) stream)))
+                    (header-attributes header))))
+  (format stream "~%Content:~%")
+  (princ (content part) stream)
+  (format stream "~%"))
 
 (defgeneric get-header (part header-name)
   (:documentation "Returns the mime-header object for the header
