@@ -505,9 +505,9 @@ Either space or tab, in short."
      ;; FIXME implement rfc2231. meanwhile we simply get rid of non-ascii characters...
      (debug-message "Non-ascii chars found in request, filename may be incorrect.~%")
      #\X)
-    (t (aref (load-time-value
-              "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~")
-             (- byte 33)))))
+    (t
+     ;; here we only have bytes from the ASCII range, so CODE-CHAR does the right thing
+     (code-char byte))))
 
 (defun ascii-string-to-boundary-array (string)
   (map-into (make-array (length string)
