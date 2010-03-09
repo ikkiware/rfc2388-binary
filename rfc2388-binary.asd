@@ -1,13 +1,5 @@
 ;; -*- lisp -*-
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (unless (find-package :rfc2388.system)
-    (defpackage :rfc2388.system
-      (:documentation "ASDF System package for rfc2388")
-      (:use :common-lisp :asdf))))
-
-(in-package :rfc2388.system)
-
 (defsystem :rfc2388-binary
   :components ((:static-file "rfc2388-binary.asd")
                (:module :source
