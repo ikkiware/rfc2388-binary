@@ -259,7 +259,7 @@ sequence."
 		 (5 (cond ((= byte #.(char-code #\-))
 			   (enqueue-byte byte)
 			   (incf state))
-			  ((lwsp-char-p byte)
+			  ((linear-whitespace-byte? byte)
 			   (enqueue-byte byte)
 			   (setf state 7))
 			  ((= byte #.(char-code #\return))
@@ -273,7 +273,7 @@ sequence."
 			   (setf more-data nil))
 			  (t
 			   (flush-queue byte))))
-		 (7 (cond ((lwsp-char-p byte)
+		 (7 (cond ((linear-whitespace-byte? byte)
 			   (enqueue-byte byte))
 			  ((= byte #.(char-code #\return))
 			   (enqueue-byte byte)
@@ -454,40 +454,6 @@ KEY-VALUE-STRING is of the form: (\w+=\"\w+\";)*"
      ;; if we get here then there's a value but no #\; and no attributes.
      finally (return-from parse-header-value
                (values value '()))))
-
-;;;; *** Utility functions
-
-(defun lwsp-char-p (byte)
-  "Returns true if BYTE is a linear-whitespace-char (LWSP-char).
-Either space or tab, in short."
-  (declare (optimize (speed 3) (safety 0) (debug 0))
-           (type (unsigned-byte 8) byte))
-  (or (= 32 byte)
-      (= 9 byte)))
-
-(defun as-ascii-char (byte)
-  "Assuming BYTE is an ASCII coded character retun the corresponding character."
-  (cond
-    ((eq 32 byte)  #\Space)
-    ((eq 9 byte) #\Tab)
-    ((or (> byte 127)
-	 (< byte 33))
-     ;; FIXME implement rfc2231. meanwhile we simply get rid of non-ascii characters...
-     (debug-message "Non-ascii chars found in request, filename may be incorrect.~%")
-     #\X)
-    (t
-     ;; here we only have bytes from the ASCII range, so CODE-CHAR does the right thing
-     (code-char byte))))
-
-(defun ascii-string-to-boundary-array (string)
-  (map-into (make-array (length string)
-                        :element-type '(unsigned-byte 8)
-                        :adjustable nil)
-            (lambda (char)
-              (if (< (char-code char) 128)
-                  (char-code char)
-                  (error "Bad char for a MIME boundary: ~C" char)))
-            string))
 
 ;;;; *** Support functions for PARSE-MIME
 

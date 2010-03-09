@@ -12,7 +12,8 @@
   :components ((:static-file "rfc2388-binary.asd")
                (:module :source
                 :components ((:file "packages")
-                             (:file "rfc2388" :depends-on ("packages"))))))
+                             (:file "utils" :depends-on ("packages"))
+                             (:file "rfc2388" :depends-on ("packages" "utils"))))))
 
 (defsystem :rfc2388-binary.test
   :components ((:module :test
