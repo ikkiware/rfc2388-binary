@@ -58,7 +58,8 @@ You may also want to look at UCW for a real-world example."))
   (:method ((object mime-part)) t)
   (:method ((object t)) nil))
 
-(defmethod print-mime-part ((part mime-part) &optional (stream *trace-output*))
+(defun print-mime-part (part &optional (stream *trace-output*))
+  (check-type part mime-part)
   (format stream "Headers:~%")
   (dolist (header (headers part))
     (format stream "~S: ~S~:{; ~S=~S~}~%"
