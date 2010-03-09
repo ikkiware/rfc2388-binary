@@ -13,7 +13,8 @@
                (:module :source
                 :components ((:file "packages")
                              (:file "utils" :depends-on ("packages"))
-                             (:file "rfc2388" :depends-on ("packages" "utils"))))))
+                             (:file "api" :depends-on ("packages" "utils"))
+                             (:file "parsing" :depends-on ("packages" "utils" "api"))))))
 
 (defsystem :rfc2388-binary.test
   :components ((:module :test

@@ -40,6 +40,49 @@
                   (error "Bad character ~C in a MIME boundary ~S" char string)))
             string))
 
+(defun mime-part-headers-to-alist (mime-part content)
+  (list content
+        (append
+         (when (content-length mime-part)
+           (list (cons "Content-Length" (content-length mime-part))))
+         (when (content-type mime-part)
+           (list (cons "Content-Type"
+                       (if (content-charset mime-part)
+                           (format nil "~A; charset=\"~A\""
+                                   (content-type mime-part)
+                                   (content-charset mime-part))
+                           (content-type mime-part)))))
+         (headers mime-part))))
+
+(defun make-mime-file-writer (file-name &key (byte-encoder #'code-char))
+  (lambda (partial-mime-part)
+    (let ((file (open file-name :direction :output :element-type 'character)))
+      (setf (content partial-mime-part) file-name)
+      (values
+       (lambda (byte)
+         (write-byte (funcall byte-encoder byte) file))
+       (lambda (mime-part)
+         (mime-part-headers-to-alist mime-part file-name))
+       (lambda ()
+         (close file)
+         (delete-file file-name))))))
+
+(defun make-mime-buffer-writer (&key (byte-encoder #'code-char))
+  (lambda (partial-mime-part)
+    (setf (content partial-mime-part)
+          (make-array (or (content-length partial-mime-part)
+                          100)
+                      :element-type 'character
+                      :adjustable t
+                      :fill-pointer 0))
+    (values
+     (lambda (byte)
+       (vector-push-extend (funcall byte-encoder byte)
+                           (content partial-mime-part)))
+     (lambda (mime-part)
+       (mime-part-headers-to-alist
+        mime-part (content partial-mime-part))))))
+
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Modifications for TBNL Copyright (c) 2004 Michael Weber and Dr. Edmund Weitz
 ;; Copyright (c) 2005 Edward Marco Baringer
