@@ -127,6 +127,8 @@ READ-MIME. See READ-MIME's documentation for details."
 
 (defmethod read-mime ((source stream) (boundary array) callback)
   (declare (optimize speed))
+  (unless (functionp callback)
+    (setf callback (fdefinition callback)))
   ;; read up to the first part
   (read-until-next-boundary source boundary #'identity :assume-first-boundary t)
   ;; read headers and boundries until we're done
@@ -221,11 +223,13 @@ sequence."
 		 (funcall data-handler (elt queue 0))
 		 (loop :for i :from 1 :below old-queue-pos
 		       :do (handle-byte (elt queue i))))
-	       (handle-byte next-byte))
+	       (handle-byte next-byte)
+               (values))
 	     (enqueue-byte (byte)
 	       (declare (type (unsigned-byte 8) byte))
 	       (setf (elt queue queue-pos) byte)
-	       (incf queue-pos))
+	       (incf queue-pos)
+               (values))
 	     (handle-byte (byte)
 	       (declare (type (unsigned-byte 8) byte))
 	       (ecase state
@@ -279,7 +283,8 @@ sequence."
 		 (8 (cond ((= byte #.(char-code #\newline))
 			   (return-from read-until-next-boundary more-data))
 			  (t
-			   (flush-queue byte)))))))
+			   (flush-queue byte)))))
+               (values)))
       (loop (handle-byte (read-byte stream))))))
 
 (defun read-next-header (stream)
