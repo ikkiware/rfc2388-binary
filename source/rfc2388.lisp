@@ -118,17 +118,17 @@ READ-MIME. See READ-MIME's documentation for details."
 
 ;;;; *** Actual parsers
 
-(defmethod read-mime ((source string) boundary callback)
+(defmethod read-mime ((source string) boundary callback-factory)
   (with-input-from-string (source source)
-    (read-mime source boundary callback)))
+    (read-mime source boundary callback-factory)))
 
-(defmethod read-mime ((source stream) (boundary string) callback)
-  (read-mime source (ascii-string-to-boundary-array boundary) callback))
+(defmethod read-mime ((source stream) (boundary string) callback-factory)
+  (read-mime source (ascii-string-to-boundary-array boundary) callback-factory))
 
-(defmethod read-mime ((source stream) (boundary array) callback)
+(defmethod read-mime ((source stream) (boundary array) callback-factory)
   (declare (optimize speed))
-  (unless (functionp callback)
-    (setf callback (fdefinition callback)))
+  (unless (functionp callback-factory)
+    (setf callback-factory (fdefinition callback-factory)))
   ;; read up to the first part
   (read-until-next-boundary source boundary #'identity :assume-first-boundary t)
   ;; read headers and boundries until we're done
@@ -168,16 +168,16 @@ READ-MIME. See READ-MIME's documentation for details."
               (progn
                 (dolist (nested-part (read-mime source
                                                 (get-header-attribute (get-header part "Content-Type") "boundary")
-                                                callback))
+                                                callback-factory))
                   (push nested-part parts))
                 (setf keep-on (read-until-next-boundary source boundary
                                                         (lambda (byte)
                                                           (declare (ignore byte))
                                                           (error "Bad data in mime stream."))
                                                         :assume-first-boundary t)))
-              (multiple-value-bind (byte-handler terminate-callback abort-callback)
-                  (funcall callback part)
-                (declare (type function byte-handler terminate-callback)
+              (multiple-value-bind (byte-handler finish-callback abort-callback)
+                  (funcall callback-factory part)
+                (declare (type function byte-handler finish-callback)
                          (type (or null function) abort-callback))
                 (let ((ok nil))
                   (unwind-protect
@@ -185,7 +185,7 @@ READ-MIME. See READ-MIME's documentation for details."
                          (setf keep-on (read-until-next-boundary source boundary byte-handler))
                          (setf ok t))
                     (if ok
-                        (push (funcall terminate-callback) parts)
+                        (push (funcall finish-callback) parts)
                         (when abort-callback
                           (funcall abort-callback))))))))
      finally (return (nreverse parts))))
@@ -358,7 +358,7 @@ The returned strings may actually be displaced arrays."
 
 KEY-VALUE-STRING is of the form: (\w+=\"\w+\";)*"
   (declare (optimize (speed 3) (safety 0) (debug 0))
-           (type (array character (*)) key-value-string))
+           (type string key-value-string))
   (flet ((make-adjustable-string (&optional (default-size 20))
            (make-array default-size
                        :element-type 'character
@@ -421,7 +421,7 @@ KEY-VALUE-STRING is of the form: (\w+=\"\w+\";)*"
   "Returns the value in header-value-string and any associated
   attributes."
   (declare (optimize (speed 3) (safety 0) (debug 0))
-           (type (array character (*)) header-value-string))
+           (type string header-value-string))
   (loop
      with value of-type (array character (*)) = (make-array (length header-value-string)
                                                             :element-type 'character
