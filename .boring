@@ -11,3 +11,5 @@
 \.nfasl$
 ^docs/html($|/)
 ^docs/pdf($|/)
+^obj.*
+xcvb.mk
