@@ -1,5 +1,10 @@
 ;; -*- lisp -*-
 
+#+xcvb
+(module
+ (:depends-on ("source/packages"
+               "source/utils")))
+
 (in-package :rfc2388-binary)
 
 (defmethod read-mime ((source string) boundary callback-factory)

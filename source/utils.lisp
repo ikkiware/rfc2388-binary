@@ -1,4 +1,9 @@
 ;; -*- lisp -*-
+
+#+xcvb
+(module
+ (:depends-on ("source/packages")))
+
 (in-package :rfc2388-binary)
 
 (declaim (inline linear-whitespace-byte? as-ascii-char))

@@ -1,5 +1,9 @@
 ;; -*- lisp -*-
 
+#+xcvb
+(module
+ (:description "package declaration for rfc2388"))
+
 (in-package :cl-user)
 
 (defpackage :rfc2388-binary

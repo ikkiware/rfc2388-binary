@@ -1,0 +1,8 @@
+#+xcvb
+(module
+ (:fullname "rfc2388-binary"
+  :depends-on ("source/api"
+               "source/packages"
+               "source/parsing"
+               "source/utils")
+  :supersedes-asdf ("rfc2388-binary")))
