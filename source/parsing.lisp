@@ -330,7 +330,7 @@ KEY-VALUE-STRING is of the form: (\w+=\"\w+\";)*"
              ;; done with value.
              (return-from parse-header-value
                (values value (parse-key-values (make-array (- (length header-value-string) 1 offset)
-                                                           :element-type 'character
+                                                           :element-type (array-element-type header-value-string)
                                                            :displaced-to header-value-string
                                                            :displaced-index-offset (1+ offset))))))
             (t
