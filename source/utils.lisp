@@ -66,8 +66,8 @@
       (values
        (lambda (byte)
          (write-byte (funcall byte-encoder byte) file))
-       (lambda (mime-part)
-         (mime-part-headers-to-alist mime-part file-name))
+       (lambda ()
+         (mime-part-headers-to-alist partial-mime-part file-name))
        (lambda ()
          (close file)
          (delete-file file-name))))))
@@ -84,9 +84,9 @@
      (lambda (byte)
        (vector-push-extend (funcall byte-encoder byte)
                            (content partial-mime-part)))
-     (lambda (mime-part)
-       (mime-part-headers-to-alist
-        mime-part (content partial-mime-part))))))
+     (lambda ()
+       (mime-part-headers-to-alist partial-mime-part
+				   (content partial-mime-part))))))
 
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Modifications for TBNL Copyright (c) 2004 Michael Weber and Dr. Edmund Weitz

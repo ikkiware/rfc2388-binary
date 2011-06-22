@@ -35,9 +35,9 @@ whatever the various termination functions returned.
 Example:
 
  (read-mime #<a binary stream> \"123\"
-            (lambda (mime-parte)
+            (lambda (mime-part)
               (values (lambda (byte) (collect-byte-somewhere byte))
-                      (lambda (mime-part) mime-part))))
+                      (lambda () mime-part))))
 
   This call would return a list of mime-part objects passing each
 byte to collect-byte-somewhere.
