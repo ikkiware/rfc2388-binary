@@ -12,7 +12,9 @@
   :components ((:module :test
                 :components ((:file "packages")
                              (:file "test" :depends-on ("packages")))))
-  :depends-on (:rfc2388-binary :fiveam))
+  :depends-on (:arnesi
+               :fiveam
+               :rfc2388-binary))
 
 
 ;;;; * Parsing rfc2888 formatted data
