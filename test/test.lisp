@@ -1,16 +1,13 @@
 ;; -*- lisp -*-
 
-(in-package :rfc2388-binary.test)
+(in-package :rfc2388-binary/test)
 
 (def-suite :rfc2388-binary)
 
 (in-suite :rfc2388-binary)
 
 (defparameter *test-data-dir*
-  (make-pathname :directory
-		 (append (pathname-directory
-                          #.(asdf:component-pathname (asdf:find-system :rfc2388-binary.test)))
-                  '("test" "data"))))
+  (asdf:system-relative-pathname :rfc2388-binary/test "test/data/"))
 
 (defun data-file (filename)
   (merge-pathnames filename *test-data-dir*))

@@ -2,14 +2,14 @@
 
 (defsystem :rfc2388-binary
   :components ((:static-file "rfc2388-binary.asd")
-               (:module :source
+               (:module "source"
                 :components ((:file "packages")
                              (:file "utils" :depends-on ("packages"))
                              (:file "api" :depends-on ("packages" "utils"))
                              (:file "parsing" :depends-on ("packages" "utils" "api"))))))
 
-(defsystem :rfc2388-binary.test
-  :components ((:module :test
+(defsystem :rfc2388-binary/test
+  :components ((:module "test"
                 :components ((:file "packages")
                              (:file "test" :depends-on ("packages")))))
   :depends-on (:arnesi

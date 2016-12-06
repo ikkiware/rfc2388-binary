@@ -2,7 +2,7 @@
 
 (in-package :cl-user)
 
-(defpackage :rfc2388-binary.test
+(defpackage :rfc2388-binary/test
   (:use :common-lisp
         :5am
         :rfc2388-binary
