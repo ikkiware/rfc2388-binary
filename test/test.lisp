@@ -152,24 +152,24 @@ hello, world!" (get-output-stream-string hello-world))))))
     (values
      (with-output-to-string (out)
        (with-input-from-file (mime (data-file file) :element-type '(unsigned-byte 8))
-	 (setf more-data
-	       (rfc2388::read-until-next-boundary mime (rfc2388::ascii-string-to-boundary-array "12345678")
-						  (lambda (byte) (write-char (code-char byte) out))))))
+         (setf more-data
+               (rfc2388::read-until-next-boundary mime (rfc2388::ascii-string-to-boundary-array "12345678")
+                                                  (lambda (byte) (write-char (code-char byte) out))))))
      more-data)))
 
 (test read-until-next-boundary
   (multiple-value-bind (content more-data) (test-read-until-boundary "mime10")
     (if (and (string= content (format nil "abc~A~A--123456" #\return #\newline))
-	     more-data)
-	(pass)
-	(fail))))
+             more-data)
+        (pass)
+        (fail))))
 
 (test read-until-next-boundary2
   (multiple-value-bind (content more-data) (test-read-until-boundary "mime11")
     (if (and (string= content (format nil "abc~A~A--123456" #\return #\newline))
-	     (not more-data))
-	(pass)
-	(fail))))
+             (not more-data))
+        (pass)
+        (fail))))
 
 (test read-mime-multipart
   (with-input-from-file (mime (data-file "mime6") :element-type '(unsigned-byte 8))
@@ -199,15 +199,15 @@ hello, world!" (get-output-stream-string hello-world))))))
     (let ((parts (read-mime mime "----------hUrrH2HCA6fHrlQsvCv5qD" #'simple-test-callback)))
       (is (= 4 (length parts)))
       (destructuring-bind (s f a file) parts
- 	(is (equalp (string-to-vector "wTWkJQflmGAAAtiuGQjZfdliukKmDMrVxzXziwGq") (content s)))
- 	(is (equalp (string-to-vector "NkPeoCRHHdAUgcTAWYkw") (content f)))
- 	(is (equalp (string-to-vector "xovkAWwneq") (content a)))	; Won't do harm, might be useful.
-	(is (string= "form-data" (header-value (get-header file "Content-Disposition"))))
-	(is (string= "application/x-macbinary" (header-value (get-header file "Content-Type"))))
-	(is (equalp (content file)
-		    (make-array 512 :element-type '(unsigned-byte 8)
-				:initial-contents (nconc (loop for x from 0 to 255 collecting x)
-							 (loop for x from 255 downto 0 collecting x)))))))))
+        (is (equalp (string-to-vector "wTWkJQflmGAAAtiuGQjZfdliukKmDMrVxzXziwGq") (content s)))
+        (is (equalp (string-to-vector "NkPeoCRHHdAUgcTAWYkw") (content f)))
+        (is (equalp (string-to-vector "xovkAWwneq") (content a)))	; Won't do harm, might be useful.
+        (is (string= "form-data" (header-value (get-header file "Content-Disposition"))))
+        (is (string= "application/x-macbinary" (header-value (get-header file "Content-Type"))))
+        (is (equalp (content file)
+                    (make-array 512 :element-type '(unsigned-byte 8)
+                                :initial-contents (nconc (loop for x from 0 to 255 collecting x)
+                                                         (loop for x from 255 downto 0 collecting x)))))))))
 
 (test random-junk
   (for-all ((random-byte-buffer (gen-buffer :length (gen-integer :min (expt 2 0) :max (expt 2 4))
@@ -244,7 +244,7 @@ hello, world!" (get-output-stream-string hello-world))))))
                                            (length (content file)))
              do (when (/= (aref random-byte-buffer index)
                           (aref (content file) index))
-                  (fail 
+                  (fail
                    "Bytes at offset ~D differ (length: ~D; on-disk: ~D; returned: ~D)"
                    index
                    (length random-byte-buffer)
@@ -255,7 +255,7 @@ hello, world!" (get-output-stream-string hello-world))))))
 
 ;; Copyright (c) 2003 Janis Dzerins
 ;; Copyright (c) 2005 Edward Marco Baringer
-;; 
+;;
 ;; Redistribution and use in source and binary forms, with or without
 ;; modification, are permitted provided that the following conditions
 ;; are met:

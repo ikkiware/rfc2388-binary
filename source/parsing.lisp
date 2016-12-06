@@ -306,6 +306,7 @@ KEY-VALUE-STRING is of the form: (\w+=\"\w+\";)*"
                      (push (cons key value) keys-and-values)))
       (nreverse keys-and-values))))
 
+;; TODO rewrite using labels
 (defun parse-header-value (header-value-string)
   "Returns the value in header-value-string and any associated
   attributes."
