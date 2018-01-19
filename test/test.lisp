@@ -153,7 +153,7 @@ hello, world!" (get-output-stream-string hello-world))))))
      (with-output-to-string (out)
        (with-input-from-file (mime (data-file file) :element-type '(unsigned-byte 8))
          (setf more-data
-               (rfc2388::read-until-next-boundary mime (rfc2388::ascii-string-to-boundary-array "12345678")
+               (rfc2388-binary::read-until-next-boundary mime (rfc2388-binary::ascii-string-to-boundary-array "12345678")
                                                   (lambda (byte) (write-char (code-char byte) out))))))
      more-data)))
 
